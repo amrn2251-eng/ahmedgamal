@@ -1,4 +1,4 @@
-﻿hkh <!DOCTYPE html>
+hkh <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -539,12 +539,12 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     <div id="teacherLoginForm">
       <div class="form-group">
         <label>رقم الهاتف</label>
-        <input type="tel" id="loginPhone" class="form-control" placeholder="01XXXXXXXXX" value="01144057841">
+        <input type="tel" id="loginPhone" class="form-control" placeholder="01XXXXXXXXX" value="01144057841" autocomplete="username">
       </div>
       <div class="form-group">
         <label>كلمة المرور</label>
         <div style="position:relative">
-          <input type="password" id="loginPass" class="form-control" placeholder="••••••••" style="padding-left:40px">
+          <input type="password" id="loginPass" class="form-control" placeholder="••••••••" style="padding-left:40px" autocomplete="current-password">
           <button type="button" onclick="togglePassVis('loginPass','eyeLogin')" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:1rem">
             <i class="fas fa-eye" id="eyeLogin"></i>
           </button>
@@ -894,6 +894,19 @@ textarea.form-control { resize: vertical; min-height: 80px; }
           </div>
         </div>
         <!-- /Books Tracking -->
+
+        <!-- WhatsApp Group Links -->
+        <div class="card" style="margin-top:16px;border-color:rgba(37,211,102,0.4)">
+          <div class="card-header">
+            <span class="card-title"><i class="fab fa-whatsapp" style="color:#25d366"></i> روابط جروبات الواتساب لأولياء الأمور</span>
+          </div>
+          <p style="color:var(--text-secondary);font-size:0.82rem;margin-bottom:14px">حط رابط جروب الواتساب لكل مرحلة — هيظهر تلقائياً لولي الأمر في بوابته لما يدخل.</p>
+          <div id="waGroupsList"></div>
+          <button class="btn btn-secondary" style="margin-top:10px" onclick="saveWAGroups()"><i class="fas fa-save"></i> حفظ الروابط</button>
+          <div id="waGroupsStatus" style="margin-top:8px;font-size:0.82rem;color:var(--text-muted)"></div>
+        </div>
+        <!-- /WhatsApp Group Links -->
+
         <!-- Observer Accounts -->
         <div class="card" style="margin-top:16px;border-color:rgba(88,166,255,0.4)">
           <div class="card-header">
@@ -1250,30 +1263,21 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 
 <!-- Group WA Modal -->
 <div class="modal-backdrop" id="groupWAModal">
-  <div class="modal modal-lg">
+  <div class="modal">
     <div class="modal-header">
-      <span class="modal-title"><i class="fab fa-whatsapp" style="color:#25d366"></i> ضم أولياء الأمور في جروب</span>
+      <span class="modal-title"><i class="fab fa-whatsapp" style="color:#25d366"></i> روابط جروبات الواتساب</span>
       <button class="modal-close" onclick="closeModal('groupWAModal')"><i class="fas fa-times"></i></button>
     </div>
-    <div class="form-group">
-      <label>اختر المرحلة الدراسية</label>
-      <select id="groupGradeSelect" class="form-control" onchange="renderGroupList()">
-        <option value="">-- اختر المرحلة --</option>
-      </select>
+    <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px">
+      حط رابط جروب واتساب لكل مرحلة — ولي الأمر لما يبحث عن ابنه هيلاقي زرار ينضم للجروب تلقائياً.
+    </p>
+    <div id="waGroupsModalList"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('groupWAModal')">إغلاق</button>
+      <button class="btn" style="background:rgba(37,211,102,0.2);color:#25d366;border:1px solid rgba(37,211,102,0.4)"
+        onclick="saveWAGroupsFromModal()"><i class="fas fa-save"></i> حفظ الروابط</button>
     </div>
-    <div class="form-group">
-      <label>رابط الجروب (اختياري — لو عندك جروب موجود)</label>
-      <input type="text" id="groupLink" class="form-control" placeholder="https://chat.whatsapp.com/xxxxx" oninput="renderGroupList()">
-    </div>
-    <div id="groupListPreview" style="margin-top:8px"></div>
-    <div class="modal-footer" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <span id="groupCount" style="color:var(--text-secondary);font-size:0.88rem;align-self:center"></span>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-secondary" onclick="closeModal('groupWAModal')">إغلاق</button>
-        <button class="btn" style="background:rgba(37,211,102,0.2);color:#25d366;border:1px solid rgba(37,211,102,0.4)"
-          onclick="sendGroupInviteAll()"><i class="fab fa-whatsapp"></i> إرسال الدعوة للكل</button>
-      </div>
-    </div>
+    <div id="waGroupsModalStatus" style="text-align:center;font-size:0.85rem;margin-top:8px"></div>
   </div>
 </div>
 
@@ -2133,7 +2137,8 @@ async function loadAllData() {
     loadMonthData(),
     loadSchedules(),
     loadIncomes(),
-    loadBooks()
+    loadBooks(),
+    loadWAGroups()
   ]);
 }
 
@@ -3436,6 +3441,7 @@ function checkSafePin() {
     renderBooks();
     loadAssistantAccountUI();
     loadObserverAccountUI();
+    renderWAGroupsUI();
     toast('تم فتح الخزنة','success');
   } else {
     document.getElementById('pinErr').style.display = 'block';
@@ -3669,7 +3675,14 @@ function buildParentStudentCard(id) {
         <div style="margin-top:14px"><div style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:6px">الحضور التفصيلي:</div>${sessHtml}</div>
         <div style="margin-top:10px"><div style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:6px">الدرجات:</div>${scoresHtml}</div>
         ${schedPanelHtml}
-        <div style="margin-top:16px;text-align:center">
+        ${waGroupLinks[s.grade] ? `
+        <div style="margin-top:12px">
+          <a href="${waGroupLinks[s.grade]}" target="_blank"
+            style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;border:none;padding:11px;border-radius:var(--radius-sm);font-family:'Cairo',sans-serif;font-size:0.92rem;font-weight:700;text-decoration:none">
+            <i class="fab fa-whatsapp" style="font-size:1.1rem"></i> انضم لجروب ${s.grade} على واتساب
+          </a>
+        </div>` : ''}
+        <div style="margin-top:12px;text-align:center">
           <a href="https://wa.me/201144057841?text=${encodeURIComponent('السلام عليكم الجنرال مستر أحمد جمال، أنا ولي أمر '+s.name)}" target="_blank" class="btn btn-success" style="width:100%"><i class="fab fa-whatsapp"></i> تواصل مع المستر</a>
         </div>
       </div>
@@ -3723,6 +3736,59 @@ function saveAllObservers() {
     const st = document.getElementById('observerStatus');
     st.textContent = '❌ خطأ في الحفظ';
     st.style.color = 'var(--danger)';
+  });
+}
+
+// =============================================
+// WHATSAPP GROUP LINKS PER GRADE
+// =============================================
+let waGroupLinks = {}; // { 'الرابع الابتدائي': 'https://chat.whatsapp.com/...' }
+
+function renderWAGroupsUI() {
+  const list = document.getElementById('waGroupsList');
+  if (!list) return;
+  list.innerHTML = '';
+  GRADES.forEach(grade => {
+    const val = waGroupLinks[grade] || '';
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:160px 1fr;gap:10px;margin-bottom:10px;align-items:center';
+    row.innerHTML = `
+      <div style="font-size:0.88rem;font-weight:600;color:var(--text-secondary);text-align:right">${grade}</div>
+      <input type="url" class="form-control wa-group-input" data-grade="${grade}"
+        placeholder="https://chat.whatsapp.com/..."
+        value="${val}" style="font-size:0.85rem;direction:ltr" autocomplete="off">`;
+    list.appendChild(row);
+  });
+}
+
+function saveWAGroups() {
+  const inputs = document.querySelectorAll('.wa-group-input');
+  const obj = {};
+  inputs.forEach(inp => {
+    const grade = inp.dataset.grade;
+    const val = inp.value.trim();
+    if (val) obj[grade] = val;
+  });
+  db.ref('settings/waGroups').set(obj).then(() => {
+    waGroupLinks = obj;
+    const st = document.getElementById('waGroupsStatus');
+    st.textContent = '✅ تم حفظ الروابط بنجاح';
+    st.style.color = 'var(--success)';
+    setTimeout(() => { st.textContent = ''; }, 3000);
+  }).catch(() => {
+    const st = document.getElementById('waGroupsStatus');
+    st.textContent = '❌ خطأ في الحفظ';
+    st.style.color = 'var(--danger)';
+  });
+}
+
+function loadWAGroups() {
+  return new Promise(resolve => {
+    db.ref('settings/waGroups').once('value', snap => {
+      waGroupLinks = snap.val() || {};
+      renderWAGroupsUI();
+      resolve();
+    });
   });
 }
 
@@ -3876,22 +3942,49 @@ function renderBooks() {
 // GROUP WHATSAPP
 // =============================================
 function openGroupWA() {
-  // ملء قائمة الصفوف
-  const sel = document.getElementById('groupGradeSelect');
-  sel.innerHTML = '<option value="">-- اختر المرحلة --</option>';
-  GRADES.forEach(g => {
-    const opt = document.createElement('option');
-    opt.value = g; opt.textContent = g;
-    sel.appendChild(opt);
-  });
-  document.getElementById('groupLink').value = '';
-  document.getElementById('groupListPreview').innerHTML = '';
-  document.getElementById('groupCount').textContent = '';
+  // ارندر الروابط الحالية
+  const list = document.getElementById('waGroupsModalList');
+  if (list) {
+    list.innerHTML = '';
+    GRADES.forEach(grade => {
+      const val = waGroupLinks[grade] || '';
+      const row = document.createElement('div');
+      row.style.cssText = 'display:grid;grid-template-columns:1fr 2fr;gap:10px;margin-bottom:12px;align-items:center';
+      row.innerHTML = `
+        <div style="font-size:0.88rem;font-weight:700;color:var(--text-secondary)">${grade}</div>
+        <input type="url" class="form-control wa-modal-input" data-grade="${grade}"
+          placeholder="https://chat.whatsapp.com/..."
+          value="${val}" style="font-size:0.85rem;direction:ltr" autocomplete="off">`;
+      list.appendChild(row);
+    });
+  }
+  document.getElementById('waGroupsModalStatus').textContent = '';
   openModal('groupWAModal');
 }
 
+function saveWAGroupsFromModal() {
+  const inputs = document.querySelectorAll('.wa-modal-input');
+  const obj = {};
+  inputs.forEach(inp => {
+    const grade = inp.dataset.grade;
+    const val = inp.value.trim();
+    if (val) obj[grade] = val;
+  });
+  db.ref('settings/waGroups').set(obj).then(() => {
+    waGroupLinks = obj;
+    const st = document.getElementById('waGroupsModalStatus');
+    st.textContent = '✅ تم حفظ الروابط بنجاح';
+    st.style.color = 'var(--success)';
+    setTimeout(() => closeModal('groupWAModal'), 1200);
+  }).catch(() => {
+    const st = document.getElementById('waGroupsModalStatus');
+    st.textContent = '❌ خطأ في الحفظ، تأكد من الاتصال بالإنترنت';
+    st.style.color = 'var(--danger)';
+  });
+}
+
 function renderGroupList() {
-  const grade = document.getElementById('groupGradeSelect').value;
+  const grade = document.getElementById('groupGradeSelect')?.value;
   const link  = document.getElementById('groupLink').value.trim();
   const preview = document.getElementById('groupListPreview');
   const countEl = document.getElementById('groupCount');
