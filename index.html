@@ -799,6 +799,9 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         <button class="report-tab-btn" onclick="switchReportTab('welcome')" id="rpt-welcome">
           <i class="fas fa-handshake"></i> ترحيب معلق
         </button>
+        <button class="report-tab-btn" onclick="switchReportTab('schedules')" id="rpt-schedules">
+          <i class="fas fa-calendar-alt"></i> جداول لم ترسل
+        </button>
       </div>
       <div id="reportContent"></div>
     </div>
@@ -1044,7 +1047,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         <label>حالة الطالب</label>
         <select id="sStatus" class="form-control">
           <option value="active">نشط</option>
-          <option value="left">غادر الأوربيتالي</option>
+          <option value="left">غادر الجنرال</option>
         </select>
       </div>
       <div class="form-group">
@@ -1541,6 +1544,19 @@ function populateGradeSelects() {
 function hideSplash(auto) {
   localStorage.setItem('splashSeen','1');
   document.getElementById('splash').style.display = 'none';
+  // محاولة استرجاع الجلسة السابقة
+  const saved = localStorage.getItem('genSession');
+  if (saved) {
+    try {
+      const s = JSON.parse(saved);
+      if (s.type === 'admin') {
+        document.getElementById('loginPhone').value = s.phone || '';
+        document.getElementById('loginPass').value  = s.pass  || '';
+        doTeacherLogin();
+        return;
+      }
+    } catch(e) { localStorage.removeItem('genSession'); }
+  }
   document.getElementById('loginScreen').style.display = 'flex';
 }
 
@@ -1568,6 +1584,7 @@ function doTeacherLogin() {
     if (phone === ADMIN_PHONE && pass === ADMIN_PASS) {
       currentUser = 'admin';
       err.style.display = 'none';
+      localStorage.setItem('genSession', JSON.stringify({type:'admin', phone, pass}));
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('app').style.display = 'block';
       document.getElementById('nav-safe').style.display = 'flex';
@@ -1769,6 +1786,7 @@ function doLogout() {
   currentUser = null; parentStudentId = null;
   currentAssistantCenter = ''; currentAssistantType = '';
   parentStudentIds = [];
+  localStorage.removeItem('genSession');
   // إزالة observer style لو موجود
   const obs = document.getElementById('observerStyle');
   if (obs) obs.remove();
@@ -1780,7 +1798,6 @@ function doLogout() {
   document.querySelectorAll('.nav-item').forEach(n => n.style.display = 'flex');
   document.getElementById('nav-safe').style.display = 'none';
   document.getElementById('nav-archive').style.display = 'none';
-  // restore key button visibility
   const keyBtn = document.querySelector('button[onclick="openChangeAdminPass()"]');
   if (keyBtn) keyBtn.style.display = '';
 }
@@ -3066,13 +3083,48 @@ function renderReports() {
         }).join('')}</tbody>
       </table></div>
     </div>`;
+  } else if (currentReportTab === 'schedules') {
+    const gradeHasSched = (g) => Object.values(schedules).some(sc => sc.grade === g);
+    const pending = rows.filter(s => {
+      if (s.phone === 'none') return false;
+      if (!gradeHasSched(s.grade)) return false;
+      const md = monthData[s.id] || {};
+      return !(md.reportsSent?.schedulesSent);
+    });
+    if (!pending.length) {
+      container.innerHTML = `<div class="empty-state"><i class="fas fa-check-circle" style="color:var(--success)"></i><p>تم إرسال الجداول لجميع الطلاب 🎉</p></div>`;
+      return;
+    }
+    container.innerHTML = `<div class="card" style="padding:0">
+      <div class="card-header" style="padding:14px 18px">
+        <span class="card-title">جداول لم ترسل</span>
+        <span class="badge badge-warning">${pending.length}</span>
+        <button class="btn btn-sm btn-primary" onclick="sendAllSchedulesToStudents()"><i class="fas fa-paper-plane"></i> إرسال الكل</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>الاسم</th><th>الصف</th><th>المواعيد</th><th>إرسال</th></tr></thead>
+        <tbody>${pending.map(s => {
+          const gradeScheds = Object.values(schedules).filter(sc => sc.grade === s.grade);
+          const schedSummary = gradeScheds.map(sc =>
+            `${sc.day1||''}${sc.time1from?' '+formatTime12h(sc.time1from):''}${sc.day2?' / '+sc.day2:''}${sc.time2from?' '+formatTime12h(sc.time2from):''}`
+          ).join(' | ');
+          return `<tr>
+            <td><strong>${s.name}</strong></td>
+            <td><span class="badge badge-accent" style="font-size:0.75rem">${s.grade}</span></td>
+            <td style="font-size:0.82rem;color:var(--text-secondary)">${schedSummary||'—'}</td>
+            <td><button class="btn btn-sm" style="background:rgba(37,211,102,0.15);color:#25d366;border:1px solid rgba(37,211,102,0.3)"
+              onclick="sendScheduleToStudent('${s.id}')"><i class="fab fa-whatsapp"></i> إرسال</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </div>`;
   } else {
+    // welcome tab
     const pending = rows.filter(s => {
       if (s.phone === 'none') return false;
       const md = monthData[s.id] || {};
       return !(md.reportsSent?.welcome);
-    });
-    if (!pending.length) {
+    });    if (!pending.length) {
       container.innerHTML = `<div class="empty-state"><i class="fas fa-check-circle" style="color:var(--success)"></i><p>تم إرسال رسائل الترحيب لجميع الطلاب 🎉</p></div>`;
       return;
     }
@@ -3103,6 +3155,41 @@ function sendAllPending(type) {
   if (grade) rows = rows.filter(s => s.grade === grade);
   rows.forEach(s => sendReport(s.id, type, true));
   toast('تم فتح رسائل الواتساب للجميع','info');
+}
+
+function sendScheduleToStudent(studentId) {
+  const s = students[studentId];
+  if (!s) return;
+  const gradeScheds = Object.values(schedules).filter(sc => sc.grade === s.grade);
+  if (!gradeScheds.length) { toast('لا يوجد جدول مسجل لهذه المرحلة','error'); return; }
+  const sc = gradeScheds[0];
+  let schedText = '';
+  if (sc.day1) { schedText += `📅 *${sc.day1}*`; if (sc.time1from) schedText += ` — ${formatTime12h(sc.time1from)}${sc.time1to?' حتى '+formatTime12h(sc.time1to):''}`;  schedText += '\n'; }
+  if (sc.day2) { schedText += `📅 *${sc.day2}*`; if (sc.time2from) schedText += ` — ${formatTime12h(sc.time2from)}${sc.time2to?' حتى '+formatTime12h(sc.time2to):''}`;  schedText += '\n'; }
+  if (sc.place) schedText += `📍 *المكان:* ${sc.place}\n`;
+  if (sc.note)  schedText += `📝 ${sc.note}\n`;
+  const imgLine = sc.imageUrl ? `\n🖼️ *صورة الجدول:*\n${sc.imageUrl}\n` : '';
+  const msg =
+`بسم الله الرحمن الرحيم 🌟
+
+📜 *نظام الجنرال في الدراسات* 📜
+👨‍🏫 *الجنرال مستر: أحمد جمال*
+────────────────────
+📋 *جدول ${s.grade}*
+
+${schedText}${imgLine}
+لو عايز تعرف أكتر ابعت للمستر 📩`;
+  openWA(s.phone, msg);
+  db.ref(`monthData/${currentMonth}/${studentId}/reportsSent/schedulesSent`).set(true);
+  toast('تم فتح واتساب لإرسال الجدول','success');
+}
+
+function sendAllSchedulesToStudents() {
+  const grade = document.getElementById('rptGradeFilter')?.value || '';
+  let rows = Object.values(students).filter(s => s.phone !== 'none');
+  if (grade) rows = rows.filter(s => s.grade === grade);
+  rows.forEach(s => sendScheduleToStudent(s.id));
+  toast('تم فتح رسائل الجداول للجميع','info');
 }
 
 // =============================================
@@ -3196,9 +3283,9 @@ function sendMonthlyReport(studentId) {
   let payLine = '';
   if (s.type === 'private') {
     if (md.paid) {
-      payLine = `\n• حالة الدفع: *✅ تم الدفع${md.payDate ? ' في ' + md.payDate : ''}*`;
+      payLine = `\n• حالة الدفع: *💰 تم الدفع${md.payDate ? ' في ' + md.payDate : ''} ✅*`;
     } else {
-      payLine = `\n• حالة الدفع: *❌ لم يتم الدفع حتى الآن*`;
+      payLine = `\n• حالة الدفع: *⚠️ لم يتم الدفع حتى الآن — يرجى سداد المصاريف*`;
     }
   }
   const msg = `📜 *نظام الجنرال في الدراسات* 📜\n👨‍🏫 *الجنرال مستر: أحمد جمال*\n----------------------------------------\n📊 *حصاد التقرير الشامل لشهر ${formatMonthLabel(currentMonth)}*  📊\n• الطالب: *${s.name}*\n• ترتيب الطالب في المرحلة: *${rankTxt}*\n----------------------------------------\n📈 *سجل درجات الاختبارات بالتفصيل*:${scoreLines}\n• المجموع الكلي: *${totalSum}*\n• إجمالي حضور الشهر: *${attendance} / 8 حصص*${payLine}\nلو عايز تعرف أكتر ابعت للمستر 📩`;
@@ -3395,7 +3482,7 @@ function renderStats() {
     <div class="stat-card stat-secondary"><div class="stat-icon">🏫</div><div class="stat-val">${center}</div><div class="stat-label">سنتر</div></div>
     <div class="stat-card stat-success"><div class="stat-icon">💰</div><div class="stat-val">${paid}</div><div class="stat-label">دفعوا هذا الشهر</div></div>
     <div class="stat-card stat-danger"><div class="stat-icon">⏳</div><div class="stat-val">${private_ - paid}</div><div class="stat-label">لم يدفعوا بعد</div></div>
-    ${leftStudents.length ? `<div class="stat-card"><div class="stat-icon">🚪</div><div class="stat-val">${leftStudents.length}</div><div class="stat-label">غادروا الأوربيتالي</div></div>` : ''}
+    ${leftStudents.length ? `<div class="stat-card"><div class="stat-icon">🚪</div><div class="stat-val">${leftStudents.length}</div><div class="stat-label">غادروا الجنرال</div></div>` : ''}
   </div>`;
   html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">';
   GRADES.forEach(grade => {
