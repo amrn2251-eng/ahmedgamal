@@ -3192,7 +3192,16 @@ function sendMonthlyReport(studentId) {
     scoreLines += `\n• اختبار ${i}: *${display}${maxLabel}*`;
     if (v!=null&&v!=='') totalSum += parseFloat(v)||0;
   }
-  const msg = `📜 *نظام الجنرال في الدراسات* 📜\n👨‍🏫 *الجنرال مستر: أحمد جمال*\n----------------------------------------\n📊 *حصاد التقرير الشامل لشهر ${formatMonthLabel(currentMonth)}*  📊\n• الطالب: *${s.name}*\n• ترتيب الطالب في المرحلة: *${rankTxt}*\n----------------------------------------\n📈 *سجل درجات الاختبارات بالتفصيل*:${scoreLines}\n• المجموع الكلي: *${totalSum}*\n• إجمالي حضور الشهر: *${attendance} / 8 حصص*\nلو عايز تعرف أكتر ابعت للمستر 📩`;
+  // حالة الدفع — للبرايفيت فقط
+  let payLine = '';
+  if (s.type === 'private') {
+    if (md.paid) {
+      payLine = `\n• حالة الدفع: *✅ تم الدفع${md.payDate ? ' في ' + md.payDate : ''}*`;
+    } else {
+      payLine = `\n• حالة الدفع: *❌ لم يتم الدفع حتى الآن*`;
+    }
+  }
+  const msg = `📜 *نظام الجنرال في الدراسات* 📜\n👨‍🏫 *الجنرال مستر: أحمد جمال*\n----------------------------------------\n📊 *حصاد التقرير الشامل لشهر ${formatMonthLabel(currentMonth)}*  📊\n• الطالب: *${s.name}*\n• ترتيب الطالب في المرحلة: *${rankTxt}*\n----------------------------------------\n📈 *سجل درجات الاختبارات بالتفصيل*:${scoreLines}\n• المجموع الكلي: *${totalSum}*\n• إجمالي حضور الشهر: *${attendance} / 8 حصص*${payLine}\nلو عايز تعرف أكتر ابعت للمستر 📩`;
   openWA(s.phone, msg);
   db.ref(`monthData/${currentMonth}/${studentId}/reportsSent/monthly`).set(true);
   toast('تم فتح واتساب للتقرير الشهري','success');
