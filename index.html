@@ -3157,7 +3157,7 @@ function renderReports() {
             <td><span class="badge badge-info">حصة ${sessionNum}</span></td>
             <td>${score!=null&&score!=='' ? `<strong style="color:var(--success)">${score}/10</strong>` : '<span style="color:var(--warning)">لم تُسجل بعد</span>'}</td>
             <td>${dateDisplay}</td>
-            <td><button class="btn btn-sm" style="background:rgba(37,211,102,0.15);color:#25d366;border:1px solid rgba(37,211,102,0.3)" onclick="sendDailyReport('${s.id}')"><i class="fab fa-whatsapp"></i> إرسال</button></td>
+            <td><button class="btn btn-sm" style="background:rgba(37,211,102,0.15);color:#25d366;border:1px solid rgba(37,211,102,0.3)" onclick="sendDailyReportForSession('${s.id}',${sessionNum})"><i class="fab fa-whatsapp"></i> إرسال</button></td>
           </tr>`;
         }).join('')}</tbody>
       </table></div>
@@ -3355,13 +3355,50 @@ function sendDailyReport(studentId) {
   let payLine = '';
   if (s.type === 'private' && md.paid && !rep.paymentSent) {
     payLine = `\n• حالة الدفع: *تم تسجيل دفع المصاريف في يوم ${md.payDate||dateDisplay}* ✅`;
-    // سجّل إن حالة الدفع اتبعتت
     db.ref(`monthData/${currentMonth}/${studentId}/reportsSent/paymentSent`).set(true);
   }
 
   const msg = `📜 *نظام الجنرال في الدراسات* 📜\n👨‍🏫 *الجنرال مستر: أحمد جمال*\n----------------------------------------\n📋 *تقرير الحضور والتقييم اليومي*:\n• التاريخ: *${dateDisplay}*\n• الطالب: *${s.name}*\n• حالة الحضور: *حاضر ومتابع بالكامل ✅*\n• درجة اختبار حصة ${targetSession}: *${scoreText} / 10*${payLine}\nلو عايز تعرف أكتر ابعت للمستر 📩`;
   openWA(s.phone, msg);
-  db.ref(`monthData/${currentMonth}/${studentId}/reportsSent/daily_s${targetSession}`).set(true);
+  // تسجيل الحصة الحالية + كل اللي قبلها كمرسلة
+  const updates = {};
+  for (let i = 1; i <= targetSession; i++) {
+    updates[`monthData/${currentMonth}/${studentId}/reportsSent/daily_s${i}`] = true;
+  }
+  db.ref().update(updates);
+  toast('تم فتح واتساب للتقرير اليومي','success');
+}
+
+// إرسال تقرير يومي لحصة محددة (من قائمة التقارير المعلقة)
+function sendDailyReportForSession(studentId, sessionNum) {
+  const s = students[studentId];
+  if (!s) return;
+  const md = monthData[studentId] || {};
+  const exams = md.exams || {};
+  const rep = md.reportsSent || {};
+
+  const score = exams[`e${sessionNum}`];
+  const scoreText = (score != null && score !== '') ? `${score}` : 'لم يُسجل بعد';
+  const sessionDate = md.sessionDates?.[`s${sessionNum}`] || '';
+  const dateDisplay = sessionDate
+    ? new Date(sessionDate).toLocaleDateString('ar-EG')
+    : new Date().toLocaleDateString('ar-EG');
+
+  let payLine = '';
+  if (s.type === 'private' && md.paid && !rep.paymentSent) {
+    payLine = `\n• حالة الدفع: *تم تسجيل دفع المصاريف في يوم ${md.payDate||dateDisplay}* ✅`;
+    db.ref(`monthData/${currentMonth}/${studentId}/reportsSent/paymentSent`).set(true);
+  }
+
+  const msg = `📜 *نظام الجنرال في الدراسات* 📜\n👨‍🏫 *الجنرال مستر: أحمد جمال*\n----------------------------------------\n📋 *تقرير الحضور والتقييم اليومي*:\n• التاريخ: *${dateDisplay}*\n• الطالب: *${s.name}*\n• حالة الحضور: *حاضر ومتابع بالكامل ✅*\n• درجة اختبار حصة ${sessionNum}: *${scoreText} / 10*${payLine}\nلو عايز تعرف أكتر ابعت للمستر 📩`;
+  openWA(s.phone, msg);
+  // تسجيل إن التقرير اتبعت → هيختفي من القائمة المعلقة
+  // + تسجيل كل الحصص السابقة كمرسلة (عشان ميظهروش في القائمة)
+  const updates = {};
+  for (let i = 1; i <= sessionNum; i++) {
+    updates[`monthData/${currentMonth}/${studentId}/reportsSent/daily_s${i}`] = true;
+  }
+  db.ref().update(updates);
   toast('تم فتح واتساب للتقرير اليومي','success');
 }
 
