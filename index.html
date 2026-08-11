@@ -3127,12 +3127,14 @@ function renderReports() {
       const md = monthData[s.id] || {};
       const sess = md.sessions || {};
       const rep  = md.reportsSent || {};
-      // نأخذ آخر حصة مسجلة (الأعلى رقماً) — لو لم يُرسل تقريرها بعد
+      // إيجاد آخر حصة مسجلة
+      let lastSession = 0;
       for (let i = 8; i >= 1; i--) {
-        if (sess[`s${i}`] === true && !rep[`daily_s${i}`]) {
-          pending.push({ s, sessionNum: i, md });
-          break; // آخر حصة مسجلة غير مُرسلة
-        }
+        if (sess[`s${i}`] === true) { lastSession = i; break; }
+      }
+      // الطالب يظهر في المعلقة فقط لو آخر حصة مسجلة عنده لم يُرسل تقريرها
+      if (lastSession > 0 && !rep[`daily_s${lastSession}`]) {
+        pending.push({ s, sessionNum: lastSession, md });
       }
     });
     if (!pending.length) {
