@@ -3127,10 +3127,11 @@ function renderReports() {
       const md = monthData[s.id] || {};
       const sess = md.sessions || {};
       const rep  = md.reportsSent || {};
-      for (let i = 1; i <= 8; i++) {
+      // نأخذ آخر حصة مسجلة (الأعلى رقماً) — لو لم يُرسل تقريرها بعد
+      for (let i = 8; i >= 1; i--) {
         if (sess[`s${i}`] === true && !rep[`daily_s${i}`]) {
           pending.push({ s, sessionNum: i, md });
-          break; // نأخذ أول حصة غير مُرسلة فقط
+          break; // آخر حصة مسجلة غير مُرسلة
         }
       }
     });
@@ -3331,18 +3332,13 @@ function sendDailyReport(studentId) {
   const exams = md.exams || {};
   const rep = md.reportsSent || {};
 
-  // إيجاد أحدث حصة حضر فيها ولم يُرسل تقريرها اليومي بعد
+  // دايماً نبعت آخر حصة مسجلة (الأعلى رقماً)
+  // لو في حصتين مسجلتين مثلاً 3 و4، الأولوية للـ4
   let targetSession = 0;
-  for (let i = 1; i <= 8; i++) {
-    if (sess[`s${i}`] === true && !rep[`daily_s${i}`]) {
+  for (let i = 8; i >= 1; i--) {
+    if (sess[`s${i}`] === true) {
       targetSession = i;
       break;
-    }
-  }
-  // لو كل الحصص اتبعتلها تقارير، بعت للأحدث
-  if (!targetSession) {
-    for (let i = 1; i <= 8; i++) {
-      if (sess[`s${i}`] === true) targetSession = i;
     }
   }
 
