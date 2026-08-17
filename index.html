@@ -3166,20 +3166,39 @@ function renderReports() {
     </div>`;
     // تم استبداله بالكود الجديد أعلاه - هذا السطر لن يُنفَّذ
   } else if (currentReportTab === 'monthly') {
+    // تحديد أي تقرير شهري معلق (نص الشهر أو آخره) حسب اليوم
+    const today = new Date().getDate();
+    const isMidMonth = today >= 14 && today <= 17; // يومين قبل/بعد نص الشهر
+    const isEndMonth = today >= 27; // آخر أيام الشهر
+    
+    let targetFlag = '';
+    let title = '';
+    if (isMidMonth) {
+      targetFlag = 'monthly_mid';
+      title = 'تقارير نص الشهر المعلقة';
+    } else if (isEndMonth) {
+      targetFlag = 'monthly_end';
+      title = 'تقارير آخر الشهر المعلقة';
+    } else {
+      targetFlag = 'monthly_mid'; // افتراضي
+      title = 'تقارير نص الشهر المعلقة';
+    }
+
     const pending = rows.filter(s => {
       if (s.phone === 'none') return false;
       const md = monthData[s.id] || {};
-      return !(md.reportsSent?.monthly);
+      return !(md.reportsSent?.[targetFlag]);
     });
+    
     if (!pending.length) {
       container.innerHTML = `<div class="empty-state"><i class="fas fa-check-circle" style="color:var(--success)"></i><p>لا توجد تقارير شهرية معلقة 🎉</p></div>`;
       return;
     }
     container.innerHTML = `<div class="card" style="padding:0">
       <div class="card-header" style="padding:14px 18px">
-        <span class="card-title">تقارير شهرية معلقة</span>
+        <span class="card-title">${title}</span>
         <span class="badge badge-warning">${pending.length}</span>
-        <button class="btn btn-sm btn-primary" onclick="sendAllPending('monthly')"><i class="fas fa-paper-plane"></i> إرسال الكل</button>
+        <button class="btn btn-sm btn-primary" onclick="sendAllPending('monthly','${targetFlag}')"><i class="fas fa-paper-plane"></i> إرسال الكل</button>
       </div>
       <div class="table-wrap"><table>
         <thead><tr><th>الاسم</th><th>الصف</th><th>الحضور</th><th>المجموع</th><th>إرسال</th></tr></thead>
@@ -3192,7 +3211,7 @@ function renderReports() {
             <td><span class="badge badge-accent" style="font-size:0.75rem">${s.grade}</span></td>
             <td>${att}/8</td>
             <td>${score}/80</td>
-            <td><button class="btn btn-sm" style="background:rgba(37,211,102,0.15);color:#25d366;border:1px solid rgba(37,211,102,0.3)" onclick="sendMonthlyReport('${s.id}')"><i class="fab fa-whatsapp"></i> إرسال</button></td>
+            <td><button class="btn btn-sm" style="background:rgba(37,211,102,0.15);color:#25d366;border:1px solid rgba(37,211,102,0.3)" onclick="sendMonthlyReport('${s.id}','${targetFlag}')"><i class="fab fa-whatsapp"></i> إرسال</button></td>
           </tr>`;
         }).join('')}</tbody>
       </table></div>
@@ -3263,11 +3282,17 @@ function renderReports() {
 </script>
 
 <script>
-function sendAllPending(type) {
+function sendAllPending(type, flag) {
   const grade = document.getElementById('rptGradeFilter')?.value || '';
   let rows = Object.values(students).filter(s => s.phone !== 'none');
   if (grade) rows = rows.filter(s => s.grade === grade);
-  rows.forEach(s => sendReport(s.id, type, true));
+  
+  if (type === 'monthly' && flag) {
+    // إرسال تقارير شهرية بـ flag محدد
+    rows.forEach(s => sendMonthlyReport(s.id, flag));
+  } else {
+    rows.forEach(s => sendReport(s.id, type, true));
+  }
   toast('تم فتح رسائل الواتساب للجميع','info');
 }
 
@@ -3320,7 +3345,7 @@ function sendWelcomeWA(studentId) {
   const s = students[studentId];
   if (!s) return;
   const today = new Date().toLocaleDateString('ar-EG');
-  const msg = `بسم الله الرحمن الرحيم 🌟\n\n📜 *نظام الجنرال في الدراسات* 📜\n👨‍🏫 *الجنرال مستر: أحمد جمال*\n----------------------------------------\nالسلام عليكم ورحمة الله وبركاته،\nتحية طيبة وبعد..\n\nتم تسجيل الطالب: *${s.name}* بنجاح في منصة الجنرال.\nنُبارك لحضرتك هذا التسجيل ونهنئك بانضمام ابنك إلى المنصة 🎉\n\n📚 *الصف الدراسي:* ${s.grade}\n📅 *تاريخ الالتحاق:* ${today}\n\nسيتم إخطار حضرتك بتقارير الحضور والدرجات بشكل منتظم إن شاء الله 📊\n\n📸 *تنبيه مهم:*\nمن فضلك أرسل صورة حديثة للطالب على هذا الرقم لاستخراج *كارنيه المنصة* الخاص بـ *${s.name}* 🪪\n\nلو عايز تعرف أكتر ابعت للمستر 📩\n\n*الجنرال مستر أحمد جمال — تاريخ* 📜\n🪐 *منصة الجنرال*`;
+  const msg = `بسم الله الرحمن الرحيم 🌟\n\n📜 *نظام الجنرال في الدراسات* 📜\n👨‍🏫 *الجنرال مستر: أحمد جمال*\n----------------------------------------\nالسلام عليكم ورحمة الله وبركاته،\nتحية طيبة وبعد..\n\nتم تسجيل الطالب: *${s.name}* بنجاح في منصة الجنرال.\nنُبارك لحضرتك هذا التسجيل ونهنئك بانضمام ابنك إلى المنصة 🎉\n\n📚 *الصف الدراسي:* ${s.grade}\n📅 *تاريخ الالتحاق:* ${today}\n\nسيتم إخطار حضرتك بتقارير الحضور والدرجات بشكل منتظم إن شاء الله 📊\n\nلو عايز تعرف أكتر ابعت للمستر 📩\n\n*الجنرال مستر أحمد جمال — تاريخ* 📜\n🪐 *منصة الجنرال*`;
   openWA(s.phone, msg);
   db.ref(`monthData/${currentMonth}/${studentId}/reportsSent/welcome`).set(true);
   toast('تم فتح واتساب لإرسال الترحيب','success');
@@ -3404,7 +3429,7 @@ function sendDailyReportForSession(studentId, sessionNum) {
   toast('تم فتح واتساب للتقرير اليومي','success');
 }
 
-function sendMonthlyReport(studentId) {
+function sendMonthlyReport(studentId, reportFlag) {
   const s = students[studentId];
   if (!s) return;
   const md = monthData[studentId] || {};
@@ -3434,9 +3459,18 @@ function sendMonthlyReport(studentId) {
       payLine = `\n• حالة الدفع: *⚠️ لم يتم الدفع حتى الآن — يرجى سداد المصاريف*`;
     }
   }
-  const msg = `📜 *نظام الجنرال في الدراسات* 📜\n👨‍🏫 *الجنرال مستر: أحمد جمال*\n----------------------------------------\n📊 *حصاد التقرير الشامل لشهر ${formatMonthLabel(currentMonth)}*  📊\n• الطالب: *${s.name}*\n• ترتيب الطالب في المرحلة: *${rankTxt}*\n----------------------------------------\n📈 *سجل درجات الاختبارات بالتفصيل*:${scoreLines}\n• المجموع الكلي: *${totalSum}*\n• إجمالي حضور الشهر: *${attendance} / 8 حصص*${payLine}\nلو عايز تعرف أكتر ابعت للمستر 📩`;
+  
+  // تحديد نوع التقرير (نص الشهر أو آخره) حسب الـ flag أو التاريخ
+  let flag = reportFlag;
+  if (!flag) {
+    const today = new Date().getDate();
+    flag = (today >= 14 && today <= 17) ? 'monthly_mid' : 'monthly_end';
+  }
+  const reportTitle = flag === 'monthly_mid' ? 'التقرير النصفي' : 'التقرير الشامل';
+  
+  const msg = `📜 *نظام الجنرال في الدراسات* 📜\n👨‍🏫 *الجنرال مستر: أحمد جمال*\n----------------------------------------\n📊 *${reportTitle} لشهر ${formatMonthLabel(currentMonth)}*  📊\n• الطالب: *${s.name}*\n• ترتيب الطالب في المرحلة: *${rankTxt}*\n----------------------------------------\n📈 *سجل درجات الاختبارات بالتفصيل*:${scoreLines}\n• المجموع الكلي: *${totalSum}*\n• إجمالي حضور الشهر: *${attendance} / 8 حصص*${payLine}\nلو عايز تعرف أكتر ابعت للمستر 📩`;
   openWA(s.phone, msg);
-  db.ref(`monthData/${currentMonth}/${studentId}/reportsSent/monthly`).set(true);
+  db.ref(`monthData/${currentMonth}/${studentId}/reportsSent/${flag}`).set(true);
   toast('تم فتح واتساب للتقرير الشهري','success');
 }
 
@@ -4323,7 +4357,7 @@ function loadBooks() {
   return new Promise(resolve => {
     db.ref('books').on('value', snap => {
       booksData = snap.val() || {};
-      if (currentUser === 'admin' && !safeLocked) renderBooks();
+      if (currentUser === 'admin') renderBooks();
       resolve();
     });
   });
