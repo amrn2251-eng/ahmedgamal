@@ -617,6 +617,9 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     <div class="nav-item" onclick="showTab('barcode')" id="nav-barcode">
       <i class="fas fa-barcode"></i><span class="nav-label">ماسح الباركود</span>
     </div>
+    <div class="nav-item" onclick="showTab('gradeConverter')" id="nav-gradeConverter">
+      <i class="fas fa-calculator"></i><span class="nav-label">تحويل الدرجات</span>
+    </div>
     <div class="nav-item" onclick="showTab('reports')" id="nav-reports">
       <i class="fas fa-file-alt"></i><span class="nav-label">التقارير</span>
     </div>
@@ -826,6 +829,109 @@ textarea.form-control { resize: vertical; min-height: 80px; }
             <button class="btn btn-sm btn-secondary" onclick="clearScanHistory()">مسح</button>
           </div>
           <div id="scanHistoryList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GRADE CONVERTER TAB -->
+    <div class="tab-page" id="tab-gradeConverter">
+      <div class="page-header">
+        <div class="page-title"><i class="fas fa-calculator"></i> تحويل الدرجات وإرسال واتساب</div>
+      </div>
+
+      <!-- تنبيه مهم -->
+      <div class="card" style="border:2px solid var(--warning);background:rgba(212,160,23,0.1);margin-bottom:20px">
+        <div style="display:flex;align-items:start;gap:12px">
+          <i class="fas fa-info-circle" style="color:var(--warning);font-size:1.8rem;flex-shrink:0"></i>
+          <div>
+            <h3 style="color:var(--warning);margin-bottom:8px;font-size:1.05rem">⚠️ مهم جداً - الفكرة:</h3>
+            <ul style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6;margin:0;padding-right:18px">
+              <li>هذه الأداة <strong>لتحويل الدرجات وإرسالها فقط</strong> - لا تحفظ أو تعدل شيء في قاعدة البيانات</li>
+              <li>الدرجة المحفوظة في المنصة تظل كما هي (مثال: 8 من 10)</li>
+              <li>الدرجة المرسلة لولي الأمر تكون محولة (مثال: 12 من 15)</li>
+              <li>لو ولي الأمر دخل المنصة الأصلية سيجد الدرجة الحقيقية (8 من 10) وليس المحولة</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- حاسبة التحويل السريع -->
+      <div class="card" style="border-color:var(--accent)">
+        <div class="card-header">
+          <span class="card-title"><i class="fas fa-bolt" style="color:var(--accent)"></i> حاسبة التحويل السريع</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px">
+          <div class="form-group" style="margin-bottom:0">
+            <label>الدرجة القصوى الأصلية (في المنصة) <span style="color:var(--danger)">*</span></label>
+            <input type="number" id="quickOrigMax" class="form-control" placeholder="مثال: 10" min="0" value="10">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>الدرجة القصوى المستهدفة (للإرسال) <span style="color:var(--danger)">*</span></label>
+            <input type="number" id="quickTargetMax" class="form-control" placeholder="مثال: 15" min="0" value="15">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>درجة الطالب الحالية <span style="color:var(--danger)">*</span></label>
+            <input type="number" id="quickStudentScore" class="form-control" placeholder="مثال: 8" min="0">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="calculateQuickConversion()"><i class="fas fa-calculator"></i> احسب التحويل</button>
+        <div id="quickResult" style="display:none;margin-top:16px;padding:16px;background:var(--bg-card2);border-radius:var(--radius-sm);border:1px solid var(--border)">
+          <div style="font-size:1.1rem;font-weight:700;color:var(--accent);margin-bottom:6px" id="quickResultText"></div>
+          <div style="font-size:0.88rem;color:var(--text-secondary)" id="quickResultFormula"></div>
+        </div>
+      </div>
+
+      <!-- إعدادات الإرسال الجماعي -->
+      <div class="card" style="border-color:rgba(37,211,102,0.4)">
+        <div class="card-header">
+          <span class="card-title"><i class="fab fa-whatsapp" style="color:#25d366"></i> إعدادات الإرسال الجماعي</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+          <div class="form-group" style="margin-bottom:0">
+            <label>الدرجة القصوى الأصلية (في المنصة) <span style="color:var(--danger)">*</span></label>
+            <input type="number" id="batchOrigMax" class="form-control" placeholder="مثال: 10" min="0" value="10" oninput="updateBatchTable()">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>الدرجة القصوى المستهدفة (للإرسال) <span style="color:var(--danger)">*</span></label>
+            <input type="number" id="batchTargetMax" class="form-control" placeholder="مثال: 15" min="0" value="15" oninput="updateBatchTable()">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary" onclick="addStudentRow()"><i class="fas fa-plus"></i> إضافة طالب</button>
+          <button class="btn btn-success" onclick="sendToAll()"><i class="fab fa-whatsapp"></i> إرسال للكل</button>
+          <button class="btn btn-danger" onclick="clearBatchTable()"><i class="fas fa-trash"></i> مسح الجدول</button>
+          <button class="btn btn-secondary" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
+        </div>
+      </div>
+
+      <!-- جدول الطلاب -->
+      <div class="card" style="padding:0">
+        <div class="card-header" style="padding:14px 18px">
+          <span class="card-title">قائمة الطلاب والدرجات</span>
+          <span class="badge badge-accent" id="batchCount">0 طالب</span>
+        </div>
+        <div class="table-wrap">
+          <table id="gradeConvTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th style="min-width:180px">اسم الطالب</th>
+                <th style="min-width:140px">رقم واتساب ولي الأمر</th>
+                <th style="min-width:100px">الدرجة الأصلية</th>
+                <th style="min-width:100px">الدرجة المحولة</th>
+                <th>النسبة %</th>
+                <th style="min-width:120px">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="gradeConvBody">
+              <tr>
+                <td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">
+                  <i class="fas fa-users" style="font-size:2.5rem;opacity:0.3;display:block;margin-bottom:12px"></i>
+                  اضغط "إضافة طالب" لبدء الجدول
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -2385,6 +2491,7 @@ function showTab(tab) {
   if (tab === 'safe' && !safeLocked) renderSafe();
   if (tab !== 'barcode' && scannerRunning) stopScanner();
   if (tab === 'barcode') { setTimeout(loadCameras, 300); }
+  if (tab === 'gradeConverter') { initGradeConverter(); }
 }
 
 function toggleSidebar() {
@@ -2775,9 +2882,31 @@ function countAttendance(md) {
   if (!md || !md.sessions) return 0;
   return Object.values(md.sessions).filter(v => v === true).length;
 }
-function calcTotalScore(md) {
+function calcTotalScore(md, grade) {
   if (!md || !md.exams) return 0;
-  return Object.values(md.exams).reduce((s,v) => s + (parseFloat(v)||0), 0);
+  
+  // إذا لم يتم تحديد الصف، احسب المجموع الكامل
+  if (!grade) {
+    return Object.values(md.exams).reduce((s,v) => s + (parseFloat(v)||0), 0);
+  }
+  
+  // احسب فقط الامتحانات الموجودة (الدرجة القصوى > 0)
+  const examMaxScores = window._examMaxScoresByGrade?.[grade];
+  if (!examMaxScores) {
+    return Object.values(md.exams).reduce((s,v) => s + (parseFloat(v)||0), 0);
+  }
+  
+  let total = 0;
+  for (let i = 1; i <= 8; i++) {
+    const maxScore = examMaxScores[`e${i}`] != null ? examMaxScores[`e${i}`] : 10;
+    if (maxScore > 0) {
+      const studentScore = md.exams[`e${i}`];
+      if (studentScore != null && studentScore !== '') {
+        total += parseFloat(studentScore) || 0;
+      }
+    }
+  }
+  return total;
 }
 function formatMonthLabel(monthKey) {
   if (!monthKey) return '';
@@ -2792,7 +2921,7 @@ function computeRanks(monthKey) {
     const gradeStudents = Object.values(students).filter(s => s.grade === grade && (s.status||'active') === 'active');
     const scored = gradeStudents.map(s => ({
       id: s.id, name: s.name,
-      score: calcTotalScore(md[s.id] || {})
+      score: calcTotalScore(md[s.id] || {}, s.grade)
     }));
     scored.sort((a,b) => b.score - a.score);
     result[grade] = scored;
@@ -2855,7 +2984,7 @@ function computeRanksSync(monthKey) {
   const result = {};
   GRADES.forEach(grade => {
     const gs = Object.values(students).filter(s => s.grade === grade);
-    const scored = gs.map(s => ({ id:s.id, name:s.name, score: calcTotalScore(md[s.id]||{}) }));
+    const scored = gs.map(s => ({ id:s.id, name:s.name, score: calcTotalScore(md[s.id]||{}, s.grade) }));
     scored.sort((a,b) => b.score - a.score);
     result[grade] = scored;
   });
@@ -2901,25 +3030,48 @@ function buildAttRow(s) {
   const exams = md.exams || {};
   const attendCount = countAttendance(md);
   
+  // قراءة إعدادات الدرجات من Cache
+  const examMaxScores = window._examMaxScoresByGrade?.[grade] || {};
+  
   let sessCells = '';
   for (let i = 1; i <= 8; i++) {
     const v = sess[`s${i}`];
     sessCells += `<td><button class="sess-btn ${v===true?'present':v===false?'absent':''}" onclick="toggleSession('${s.id}',${i})">${i}</button></td>`;
   }
   
+  // حساب المجموع الكلي والفعلي
+  let totalScore = 0, totalMax = 0;
   let examInputs = '';
+  
   for (let i = 1; i <= 8; i++) {
-    const v = exams[`e${i}`];
-    const maxVal = getGradeMaxScore(grade, i);
-    const maxAttr = maxVal != null ? `max="${maxVal}"` : '';
-    const ph = `ا${i}`;
-    const title = maxVal != null ? `اختبار ${i} (من ${maxVal})` : `اختبار ${i} (بدون حد أقصى)`;
+    const maxScore = examMaxScores[`e${i}`] != null ? examMaxScores[`e${i}`] : 10;
+    const studentScore = exams[`e${i}`];
     
-    examInputs += `<input type="number" class="exam-inp ${v!=null&&v!==''?'filled':''}" min="0" ${maxAttr} step="0.5"
-      value="${v!=null&&v!==''?v:''}" placeholder="${ph}"
-      onchange="saveExamScore('${s.id}',${i},this.value)"
-      title="${title}">`;
+    if (maxScore > 0) {
+      // امتحان موجود - حقل نشط
+      totalMax += maxScore;
+      if (studentScore != null && studentScore !== '') {
+        totalScore += parseFloat(studentScore);
+      }
+      
+      const v = studentScore;
+      const ph = `ا${i}`;
+      const title = `اختبار ${i} (من ${maxScore})`;
+      
+      examInputs += `<input type="number" class="exam-inp ${v!=null&&v!==''?'filled':''}" min="0" max="${maxScore}" step="0.5"
+        value="${v!=null&&v!==''?v:''}" placeholder="${ph}"
+        onchange="saveExamScore('${s.id}',${i},this.value)"
+        title="${title}">`;
+    } else {
+      // امتحان غير موجود (درجة = 0) - حقل معطل
+      examInputs += `<input type="text" class="exam-inp" value="-" disabled
+        style="background:var(--bg-card2);color:var(--text-muted);cursor:not-allowed"
+        title="لا يوجد امتحان ${i}">`;
+    }
   }
+  
+  // عرض المجموع
+  const scoreDisplay = `<span style="font-weight:700;color:var(--accent)">${totalScore}</span><span style="color:var(--text-muted)">/${totalMax}</span>`;
   
   return `<tr>
     <td><strong>${s.name}</strong></td>
@@ -2943,22 +3095,101 @@ function toggleSession(studentId, sessionNum) {
 }
 
 function saveExamScore(studentId, examNum, val) {
-  const v = val === '' ? null : parseFloat(val);
-  if (v !== null && isNaN(v)) { toast('أدخل رقماً صحيحاً','error'); return; }
-  if (v !== null && v < 0) { toast('الدرجة لا يمكن أن تكون أقل من 0','error'); return; }
+  console.log(`🔍 saveExamScore استُدعيت: الطالب=${studentId}, الاختبار=${examNum}, القيمة="${val}"`);
   
-  // Get student's grade to check max score
+  const v = val === '' ? null : parseFloat(val);
+  console.log(`📝 القيمة بعد التحويل: ${v}`);
+  
+  // تحقق من الإدخال
+  if (v !== null && isNaN(v)) { 
+    console.error('❌ القيمة ليست رقماً');
+    toast('أدخل رقماً صحيحاً','error'); 
+    return; 
+  }
+  if (v !== null && v < 0) { 
+    console.error('❌ القيمة سالبة');
+    toast('الدرجة لا يمكن أن تكون أقل من 0','error'); 
+    return; 
+  }
+  
+  // تحقق من الحد الأقصى
   const student = students[studentId];
-  if (student) {
+  console.log(`👤 بيانات الطالب:`, student);
+  
+  if (student && v !== null) {
     const maxScore = getGradeMaxScore(student.grade, examNum);
-    if (v !== null && maxScore != null && v > maxScore) {
-      toast(`الدرجة يجب أن تكون بين 0 و ${maxScore}`,'error');
+    console.log(`📊 الحد الأقصى للاختبار ${examNum} في صف ${student.grade}: ${maxScore}`);
+    
+    if (maxScore != null && v > maxScore) {
+      console.error(`❌ الدرجة ${v} أكبر من الحد الأقصى ${maxScore}`);
+      toast(`اختبار ${examNum}: الحد الأقصى ${maxScore} درجة — أنت أدخلت ${v}`,'error');
       return;
     }
   }
   
+  // تحقق من الاتصال بالإنترنت
+  if (!navigator.onLine) {
+    toast('لا يوجد اتصال بالإنترنت ⚠️', 'error');
+    return;
+  }
+  
+  // تحقق من وجود db
+  if (!db) {
+    console.error('❌ Firebase database غير متصل');
+    toast('خطأ: قاعدة البيانات غير متصلة', 'error');
+    return;
+  }
+  
+  // حفظ في Firebase
+  console.log(`💾 جاري الحفظ في monthData/${currentMonth}/${studentId}/exams/e${examNum}`);
+  
+  // التأكد من وجود currentMonth
+  if (!currentMonth) {
+    console.error('❌ currentMonth غير محدد');
+    toast('خطأ: الشهر الحالي غير محدد', 'error');
+    return;
+  }
+  
   const ref = db.ref(`monthData/${currentMonth}/${studentId}/exams/e${examNum}`);
-  if (v === null) { ref.remove(); } else { ref.set(v); }
+  
+  if (v === null) { 
+    ref.remove()
+      .then(() => {
+        console.log(`✅ تم حذف درجة الطالب ${studentId} في اختبار ${examNum}`);
+        playBeep(true);
+        toast('✅ تم حذف الدرجة', 'success');
+      })
+      .catch(err => {
+        console.error('❌ خطأ في حذف الدرجة:', err);
+        console.error('تفاصيل الخطأ:', err.code, err.message);
+        if (err.code === 'PERMISSION_DENIED') {
+          toast('⚠️ ليس لديك صلاحية لحذف البيانات', 'error');
+        } else {
+          toast('خطأ في الحذف: ' + err.message, 'error');
+        }
+      });
+  } else { 
+    ref.set(v)
+      .then(() => {
+        console.log(`✅ تم حفظ درجة ${v} للطالب ${studentId} في اختبار ${examNum}`);
+        playBeep(true);
+        toast(`✅ تم حفظ الدرجة ${v}`, 'success');
+      })
+      .catch(err => {
+        console.error('❌ خطأ في حفظ الدرجة:', err);
+        console.error('كود الخطأ:', err.code);
+        console.error('رسالة الخطأ:', err.message);
+        console.error('المسار:', ref.path.toString());
+        
+        if (err.code === 'PERMISSION_DENIED') {
+          toast('⚠️ ليس لديك صلاحية لحفظ البيانات - تحقق من قواعد Firebase', 'error');
+        } else if (err.code === 'NETWORK_ERROR') {
+          toast('⚠️ خطأ في الشبكة - تحقق من الاتصال بالإنترنت', 'error');
+        } else {
+          toast('خطأ في الحفظ: ' + err.message, 'error');
+        }
+      });
+  }
 }
 
 // =============================================
@@ -2980,7 +3211,7 @@ function toggleGradeSettings() {
 function getDefaultGradeSettings() {
   return {
     e1: 10, e2: 10, e3: 10, e4: 10,
-    e5: 10, e6: 10, e7: 10, e8: null // null means no limit
+    e5: 10, e6: 10, e7: 10, e8: 10
   };
 }
 
@@ -2991,11 +3222,23 @@ function saveGradeSettings() {
   const settings = {};
   for (let i = 1; i <= 8; i++) {
     const val = document.getElementById(`examMax${i}`).value.trim();
-    settings[`e${i}`] = val === '' ? null : parseFloat(val);
+    const numVal = val === '' ? 10 : parseFloat(val);
+    if (isNaN(numVal) || numVal < 0) {
+      toast(`أدخل درجة صحيحة للامتحان ${i} (0 = لا يوجد امتحان)`,'error');
+      return;
+    }
+    settings[`e${i}`] = numVal;
   }
   
-  db.ref(`gradeSettings/${grade}`).set(settings).then(() => {
+  // حفظ في monthData/{month}/_examMaxScores/{grade}
+  db.ref(`monthData/${currentMonth}/_examMaxScores/${grade}`).set(settings).then(() => {
+    // تحديث الـ Cache
+    if (!window._examMaxScoresByGrade) window._examMaxScoresByGrade = {};
+    window._examMaxScoresByGrade[grade] = settings;
+    
     toast('تم حفظ إعدادات الدرجات','success');
+    // تحديث الجدول
+    renderAttendanceTable();
   }).catch(err => {
     toast('خطأ في الحفظ: ' + err.message,'error');
   });
@@ -3006,8 +3249,14 @@ function resetGradeSettings() {
   if (!grade) { toast('اختر صفاً أولاً','error'); return; }
   
   const defaults = getDefaultGradeSettings();
-  db.ref(`gradeSettings/${grade}`).set(defaults).then(() => {
+  db.ref(`monthData/${currentMonth}/_examMaxScores/${grade}`).set(defaults).then(() => {
+    // تحديث الـ Cache
+    if (!window._examMaxScoresByGrade) window._examMaxScoresByGrade = {};
+    window._examMaxScoresByGrade[grade] = defaults;
+    
     toast('تم استعادة الإعدادات الافتراضية','success');
+    displayGradeSettings(grade);
+    renderAttendanceTable();
   }).catch(err => {
     toast('خطأ في الاستعادة: ' + err.message,'error');
   });
@@ -3023,64 +3272,72 @@ function displayGradeSettings(grade) {
   card.style.display = 'block';
   document.getElementById('settingsGradeName').textContent = grade;
   
-  const settings = gradeSettings[grade] || getDefaultGradeSettings();
-  let total = 0;
-  for (let i = 1; i <= 8; i++) {
-    const val = settings[`e${i}`];
-    document.getElementById(`examMax${i}`).value = val != null ? val : '';
-    if (val != null) total += val;
-  }
-  
-  const totalEl = document.getElementById('totalMaxScore');
-  if (settings.e8 == null) {
-    totalEl.textContent = `المجموع: ${total - (settings.e7 || 0)} + ا8 (مفتوح) = مفتوح`;
-  } else {
-    totalEl.textContent = `المجموع الكلي: ${total}`;
-  }
-  
-  // Update display on input change
-  for (let i = 1; i <= 8; i++) {
-    document.getElementById(`examMax${i}`).oninput = () => updateTotalDisplay(grade);
-  }
+  // قراءة من monthData/{month}/_examMaxScores/{grade}
+  db.ref(`monthData/${currentMonth}/_examMaxScores/${grade}`).once('value', snap => {
+    const settings = snap.val() || getDefaultGradeSettings();
+    
+    // تحديث الـ Cache
+    if (!window._examMaxScoresByGrade) window._examMaxScoresByGrade = {};
+    window._examMaxScoresByGrade[grade] = settings;
+    
+    let total = 0;
+    for (let i = 1; i <= 8; i++) {
+      // ✅ استخدام != null للحفاظ على الصفر
+      const val = settings[`e${i}`] != null ? settings[`e${i}`] : 10;
+      document.getElementById(`examMax${i}`).value = val;
+      if (val > 0) total += val;
+    }
+    
+    updateTotalDisplay();
+    
+    // Update display on input change
+    for (let i = 1; i <= 8; i++) {
+      document.getElementById(`examMax${i}`).oninput = () => updateTotalDisplay();
+    }
+  }).catch(err => {
+    console.error('خطأ في قراءة إعدادات الدرجات:', err);
+    // استخدام القيم الافتراضية
+    const settings = getDefaultGradeSettings();
+    for (let i = 1; i <= 8; i++) {
+      document.getElementById(`examMax${i}`).value = settings[`e${i}`];
+    }
+    updateTotalDisplay();
+  });
 }
 
-function updateTotalDisplay(grade) {
+function updateTotalDisplay() {
   let total = 0;
-  let e8Val = null;
   for (let i = 1; i <= 8; i++) {
     const val = document.getElementById(`examMax${i}`).value.trim();
-    const num = val === '' ? null : parseFloat(val);
-    if (i === 8) e8Val = num;
-    if (num != null) total += num;
+    const num = val === '' ? 10 : parseFloat(val);
+    if (!isNaN(num) && num > 0) total += num;
   }
   
   const totalEl = document.getElementById('totalMaxScore');
-  if (e8Val == null) {
-    totalEl.textContent = `المجموع: ${total} + ا8 (مفتوح) = مفتوح`;
-  } else {
-    totalEl.textContent = `المجموع الكلي: ${total}`;
-  }
+  totalEl.textContent = `المجموع الكلي: ${total} درجة`;
 }
 
 function getGradeMaxScore(grade, examNum) {
-  const settings = gradeSettings[grade] || getDefaultGradeSettings();
-  const max = settings[`e${examNum}`];
-  return max != null ? max : (examNum === 8 ? null : 10);
+  // القراءة من Cache أولاً
+  const cached = window._examMaxScoresByGrade?.[grade];
+  if (cached) {
+    return cached[`e${examNum}`] != null ? cached[`e${examNum}`] : 10;
+  }
+  // القيمة الافتراضية
+  return 10;
 }
 
 function getGradeTotalMax(grade) {
-  const settings = gradeSettings[grade] || getDefaultGradeSettings();
+  // القراءة من Cache
+  const examMaxScores = window._examMaxScoresByGrade?.[grade];
+  if (!examMaxScores) return 80; // افتراضي: 8 امتحانات × 10
+  
   let total = 0;
-  let hasOpen = false;
   for (let i = 1; i <= 8; i++) {
-    const val = settings[`e${i}`];
-    if (val == null) {
-      hasOpen = true;
-    } else {
-      total += val;
-    }
+    const maxScore = examMaxScores[`e${i}`] != null ? examMaxScores[`e${i}`] : 10;
+    if (maxScore > 0) total += maxScore;
   }
-  return hasOpen ? null : total;
+  return total;
 }
 
 function quickAttendance() {
@@ -3603,11 +3860,20 @@ function sendDailyReportForSession(studentId, sessionNum) {
   const md = monthData[studentId] || {};
   const exams = md.exams || {};
   const rep = md.reportsSent || {};
-
+  
+  // قراءة إعدادات الدرجات للصف
+  const examMaxScores = window._examMaxScoresByGrade?.[s.grade] || {};
+  const maxScore = examMaxScores[`e${sessionNum}`] != null ? examMaxScores[`e${sessionNum}`] : 10;
+  
+  // إذا كانت الدرجة القصوى = 0، لا يوجد امتحان
+  if (maxScore === 0) {
+    toast(`لا يوجد امتحان ${sessionNum} في هذا الصف`,'warning');
+    return;
+  }
+  
   const score = exams[`e${sessionNum}`];
-  const maxScore = getGradeMaxScore(s.grade, sessionNum);
   const scoreText = (score != null && score !== '') 
-    ? (maxScore != null ? `${score} / ${maxScore}` : `${score}`)
+    ? `${score} / ${maxScore}`
     : 'لم يُسجل بعد';
   const sessionDate = md.sessionDates?.[`s${sessionNum}`] || '';
   const dateDisplay = sessionDate
@@ -4951,6 +5217,281 @@ document.addEventListener('DOMContentLoaded', () => {
     populateGradeSelects();
   }
 });
+</script>
+
+<script>
+// =============================================
+// GRADE CONVERTER FUNCTIONS
+// =============================================
+let gradeConversionRows = [];
+
+// حاسبة التحويل السريع
+function calculateQuickConversion() {
+  const origMax = parseFloat(document.getElementById('quickOrigMax').value);
+  const targetMax = parseFloat(document.getElementById('quickTargetMax').value);
+  const studentScore = parseFloat(document.getElementById('quickStudentScore').value);
+  
+  if (!origMax || origMax <= 0) {
+    toast('أدخل الدرجة القصوى الأصلية', 'error');
+    return;
+  }
+  if (!targetMax || targetMax <= 0) {
+    toast('أدخل الدرجة القصوى المستهدفة', 'error');
+    return;
+  }
+  if (studentScore === undefined || studentScore === null || studentScore === '') {
+    toast('أدخل درجة الطالب', 'error');
+    return;
+  }
+  if (studentScore > origMax) {
+    toast('درجة الطالب أكبر من الدرجة القصوى!', 'error');
+    return;
+  }
+  
+  const convertedScore = (studentScore / origMax) * targetMax;
+  const percentage = (studentScore / origMax) * 100;
+  
+  const resultDiv = document.getElementById('quickResult');
+  const resultText = document.getElementById('quickResultText');
+  const resultFormula = document.getElementById('quickResultFormula');
+  
+  resultText.innerHTML = `✨ الدرجة للإرسال: <span style="color:var(--warning);font-size:1.3rem">${convertedScore.toFixed(2)}</span> من ${targetMax} — النسبة: <span style="color:var(--success)">${percentage.toFixed(1)}%</span>`;
+  resultFormula.textContent = `المعادلة: (${studentScore} ÷ ${origMax}) × ${targetMax} = ${convertedScore.toFixed(2)}`;
+  
+  resultDiv.style.display = 'block';
+  playBeep(true);
+}
+
+// إضافة صف طالب جديد
+function addStudentRow(name = '', phone = '', score = '') {
+  const row = {
+    id: Date.now() + Math.random(),
+    name: name,
+    phone: phone,
+    originalScore: score
+  };
+  gradeConversionRows.push(row);
+  renderBatchTable();
+}
+
+// تحديث الجدول
+function updateBatchTable() {
+  renderBatchTable();
+}
+
+// رسم جدول الطلاب
+function renderBatchTable() {
+  const tbody = document.getElementById('gradeConvBody');
+  const countBadge = document.getElementById('batchCount');
+  const origMax = parseFloat(document.getElementById('batchOrigMax').value) || 10;
+  const targetMax = parseFloat(document.getElementById('batchTargetMax').value) || 15;
+  
+  if (!gradeConversionRows.length) {
+    tbody.innerHTML = `<tr>
+      <td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">
+        <i class="fas fa-users" style="font-size:2.5rem;opacity:0.3;display:block;margin-bottom:12px"></i>
+        اضغط "إضافة طالب" لبدء الجدول
+      </td>
+    </tr>`;
+    countBadge.textContent = '0 طالب';
+    return;
+  }
+  
+  countBadge.textContent = `${gradeConversionRows.length} طالب`;
+  
+  tbody.innerHTML = gradeConversionRows.map((row, index) => {
+    const origScore = parseFloat(row.originalScore) || 0;
+    const convertedScore = origMax > 0 ? ((origScore / origMax) * targetMax).toFixed(2) : 0;
+    const percentage = origMax > 0 ? ((origScore / origMax) * 100).toFixed(1) : 0;
+    
+    return `<tr>
+      <td>${index + 1}</td>
+      <td><input type="text" class="form-control" placeholder="اسم الطالب" value="${row.name}" 
+          onchange="updateRowData(${index}, 'name', this.value)" style="min-width:180px"></td>
+      <td><input type="tel" class="form-control" placeholder="01XXXXXXXXX" value="${row.phone}" 
+          onchange="updateRowData(${index}, 'phone', this.value)" style="min-width:140px"></td>
+      <td><input type="number" class="form-control" placeholder="0" min="0" max="${origMax}" value="${row.originalScore}" 
+          onchange="updateRowData(${index}, 'originalScore', this.value)" style="min-width:100px;text-align:center"></td>
+      <td><strong style="color:var(--warning);font-size:1.05rem">${convertedScore}</strong> <span style="color:var(--text-muted);font-size:0.85rem">من ${targetMax}</span></td>
+      <td><span class="badge ${percentage >= 50 ? 'badge-success' : 'badge-danger'}">${percentage}%</span></td>
+      <td>
+        <div style="display:flex;gap:4px;justify-content:center">
+          <button class="btn btn-success btn-xs" onclick="sendToStudent(${index})" title="إرسال واتساب">
+            <i class="fab fa-whatsapp"></i>
+          </button>
+          <button class="btn btn-danger btn-xs" onclick="deleteRow(${index})" title="حذف">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// تحديث بيانات الصف
+function updateRowData(index, field, value) {
+  if (gradeConversionRows[index]) {
+    gradeConversionRows[index][field] = value;
+    renderBatchTable();
+  }
+}
+
+// حذف صف
+function deleteRow(index) {
+  if (confirm('هل تريد حذف هذا الطالب من القائمة؟')) {
+    gradeConversionRows.splice(index, 1);
+    renderBatchTable();
+    toast('تم الحذف', 'success');
+  }
+}
+
+// إرسال لطالب واحد
+function sendToStudent(index) {
+  const row = gradeConversionRows[index];
+  if (!row) return;
+  
+  if (!row.name.trim()) {
+    toast('أدخل اسم الطالب أولاً', 'error');
+    return;
+  }
+  if (!row.phone.trim()) {
+    toast('أدخل رقم الواتساب أولاً', 'error');
+    return;
+  }
+  if (!row.originalScore || parseFloat(row.originalScore) < 0) {
+    toast('أدخل الدرجة الأصلية أولاً', 'error');
+    return;
+  }
+  
+  const origMax = parseFloat(document.getElementById('batchOrigMax').value) || 10;
+  const targetMax = parseFloat(document.getElementById('batchTargetMax').value) || 15;
+  const origScore = parseFloat(row.originalScore);
+  const convertedScore = ((origScore / origMax) * targetMax).toFixed(2);
+  const percentage = ((origScore / origMax) * 100).toFixed(1);
+  
+  const message = `السلام عليكم ورحمة الله
+
+درجة الطالب/ـة ${row.name} في الامتحان:
+
+${convertedScore} من ${targetMax}
+
+النسبة المئوية: ${percentage}%
+
+بالتوفيق 🌟`;
+
+  const phone = row.phone.replace(/\D/g, '');
+  const intlPhone = phone.startsWith('0') ? '2' + phone : phone;
+  
+  window.open(`https://wa.me/${intlPhone}?text=${encodeURIComponent(message)}`, '_blank');
+  toast(`تم فتح واتساب لـ ${row.name}`, 'success');
+  playBeep(true);
+}
+
+// إرسال للكل
+function sendToAll() {
+  if (!gradeConversionRows.length) {
+    toast('لا يوجد طلاب في القائمة', 'warning');
+    return;
+  }
+  
+  const validRows = gradeConversionRows.filter(row => 
+    row.name.trim() && row.phone.trim() && row.originalScore && parseFloat(row.originalScore) >= 0
+  );
+  
+  if (!validRows.length) {
+    toast('لا يوجد طلاب جاهزين للإرسال (تأكد من ملء جميع البيانات)', 'warning');
+    return;
+  }
+  
+  if (!confirm(`هل تريد إرسال رسائل واتساب لـ ${validRows.length} طالب؟\n\nسيتم فتح نافذة واتساب لكل طالب بالتسلسل.`)) {
+    return;
+  }
+  
+  const origMax = parseFloat(document.getElementById('batchOrigMax').value) || 10;
+  const targetMax = parseFloat(document.getElementById('batchTargetMax').value) || 15;
+  
+  let delay = 0;
+  validRows.forEach((row, i) => {
+    setTimeout(() => {
+      const origScore = parseFloat(row.originalScore);
+      const convertedScore = ((origScore / origMax) * targetMax).toFixed(2);
+      const percentage = ((origScore / origMax) * 100).toFixed(1);
+      
+      const message = `السلام عليكم ورحمة الله
+
+درجة الطالب/ـة ${row.name} في الامتحان:
+
+${convertedScore} من ${targetMax}
+
+النسبة المئوية: ${percentage}%
+
+بالتوفيق 🌟`;
+
+      const phone = row.phone.replace(/\D/g, '');
+      const intlPhone = phone.startsWith('0') ? '2' + phone : phone;
+      
+      window.open(`https://wa.me/${intlPhone}?text=${encodeURIComponent(message)}`, '_blank');
+      
+      if (i === validRows.length - 1) {
+        toast(`تم إرسال ${validRows.length} رسالة بنجاح! 🎉`, 'success');
+        playBeep(true);
+      }
+    }, delay);
+    delay += 1500; // تأخير 1.5 ثانية بين كل رسالة
+  });
+}
+
+// مسح الجدول
+function clearBatchTable() {
+  if (!gradeConversionRows.length) return;
+  
+  if (confirm('هل تريد مسح جميع البيانات من الجدول؟\n\nهذا الإجراء لا يمكن التراجع عنه.')) {
+    gradeConversionRows = [];
+    renderBatchTable();
+    toast('تم مسح الجدول', 'success');
+  }
+}
+
+// تصدير Excel (بسيط)
+function exportToExcel() {
+  if (!gradeConversionRows.length) {
+    toast('لا يوجد بيانات للتصدير', 'warning');
+    return;
+  }
+  
+  const origMax = parseFloat(document.getElementById('batchOrigMax').value) || 10;
+  const targetMax = parseFloat(document.getElementById('batchTargetMax').value) || 15;
+  
+  let csv = 'اسم الطالب,رقم الواتساب,الدرجة الأصلية,الدرجة المحولة,النسبة %\n';
+  
+  gradeConversionRows.forEach(row => {
+    const origScore = parseFloat(row.originalScore) || 0;
+    const convertedScore = ((origScore / origMax) * targetMax).toFixed(2);
+    const percentage = ((origScore / origMax) * 100).toFixed(1);
+    
+    csv += `"${row.name}","${row.phone}",${origScore},${convertedScore},${percentage}\n`;
+  });
+  
+  // Create download
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `تحويل_الدرجات_${new Date().toLocaleDateString('ar-EG').replace(/\//g, '-')}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  toast('تم تصدير الملف بنجاح 📥', 'success');
+}
+
+// تهيئة عند فتح التبويب
+function initGradeConverter() {
+  if (!gradeConversionRows.length) {
+    renderBatchTable();
+  }
+}
 </script>
 
 <!-- PRINT STYLES FOR SCHEDULES -->
