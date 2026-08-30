@@ -2414,12 +2414,15 @@ async function loadAllData() {
 
 function loadStudents() {
   return new Promise(resolve => {
-    db.ref('students').on('value', snap => {
+    db.ref('students').on('value', async snap => {
       students = snap.val() || {};
       if (currentUser === 'admin') {
+        // ✅ تحميل إعدادات الدرجات أولاً
+        await preloadAllGradeSettings();
+        
         renderStudentsTable();
         renderHonorRoll();
-        renderAttendanceTable();
+        await renderAttendanceTable();
         renderStats();
         renderReports();
       } else if (currentUser === 'parent') {
@@ -2432,12 +2435,15 @@ function loadStudents() {
 
 function loadMonthData() {
   return new Promise(resolve => {
-    db.ref(`monthData/${currentMonth}`).on('value', snap => {
+    db.ref(`monthData/${currentMonth}`).on('value', async snap => {
       monthData = snap.val() || {};
       if (currentUser === 'admin') {
+        // ✅ تحميل إعدادات الدرجات لجميع الصفوف أولاً
+        await preloadAllGradeSettings();
+        
         renderStudentsTable();
         renderHonorRoll();
-        renderAttendanceTable();
+        await renderAttendanceTable();
         renderStats();
         renderReports();
         renderIncomes();
@@ -2995,19 +3001,24 @@ function computeRanksSync(monthKey) {
 // =============================================
 // ATTENDANCE TABLE
 // =============================================
-function renderAttendanceTable() {
+async function renderAttendanceTable() {
   const grade = document.getElementById('attGradeFilter')?.value || '';
   const tbody = document.getElementById('attendanceBody');
   if (!tbody) return;
   
-  // Display grade settings card
-  displayGradeSettings(grade);
-  
   if (!grade) {
     tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><i class="fas fa-filter"></i><p>اختر الصف أولاً</p></div></td></tr>`;
     document.getElementById('attSummary').style.display = 'none';
+    document.getElementById('gradeSettingsCard').style.display = 'none';
     return;
   }
+  
+  // ✅ تحميل إعدادات الدرجات أولاً قبل رسم الجدول
+  await loadGradeSettings(grade);
+  
+  // عرض بطاقة إعدادات الدرجات
+  displayGradeSettings(grade);
+  
   let rows = Object.values(students).filter(s => s.grade === grade);
   // فلتر حسب نوع المساعد
   rows = _filterByAssistantType(rows);
@@ -3232,14 +3243,15 @@ function saveGradeSettings() {
   }
   
   // حفظ في monthData/{month}/_examMaxScores/{grade}
-  db.ref(`monthData/${currentMonth}/_examMaxScores/${grade}`).set(settings).then(() => {
-    // تحديث الـ Cache
+  db.ref(`monthData/${currentMonth}/_examMaxScores/${grade}`).set(settings).then(async () => {
+    // ✅ تحديث الـ Cache بعد الحفظ
     if (!window._examMaxScoresByGrade) window._examMaxScoresByGrade = {};
     window._examMaxScoresByGrade[grade] = settings;
     
     toast('تم حفظ إعدادات الدرجات','success');
-    // تحديث الجدول
-    renderAttendanceTable();
+    
+    // ✅ إعادة تحميل الجدول مع الإعدادات الجديدة
+    await renderAttendanceTable();
   }).catch(err => {
     toast('خطأ في الحفظ: ' + err.message,'error');
   });
@@ -3250,17 +3262,78 @@ function resetGradeSettings() {
   if (!grade) { toast('اختر صفاً أولاً','error'); return; }
   
   const defaults = getDefaultGradeSettings();
-  db.ref(`monthData/${currentMonth}/_examMaxScores/${grade}`).set(defaults).then(() => {
-    // تحديث الـ Cache
+  db.ref(`monthData/${currentMonth}/_examMaxScores/${grade}`).set(defaults).then(async () => {
+    // ✅ تحديث الـ Cache
     if (!window._examMaxScoresByGrade) window._examMaxScoresByGrade = {};
     window._examMaxScoresByGrade[grade] = defaults;
     
     toast('تم استعادة الإعدادات الافتراضية','success');
+    
+    // ✅ تحديث العرض
     displayGradeSettings(grade);
-    renderAttendanceTable();
+    await renderAttendanceTable();
   }).catch(err => {
     toast('خطأ في الاستعادة: ' + err.message,'error');
   });
+}
+
+// ✅ دالة جديدة لتحميل إعدادات الدرجات مع Promise
+async function loadGradeSettings(grade) {
+  if (!grade) return;
+  
+  try {
+    const snap = await db.ref(`monthData/${currentMonth}/_examMaxScores/${grade}`).once('value');
+    const settings = snap.val() || getDefaultGradeSettings();
+    
+    // تحديث الـ Cache
+    if (!window._examMaxScoresByGrade) window._examMaxScoresByGrade = {};
+    window._examMaxScoresByGrade[grade] = settings;
+    
+    return settings;
+  } catch (err) {
+    console.error('خطأ في قراءة إعدادات الدرجات:', err);
+    // استخدام القيم الافتراضية
+    const settings = getDefaultGradeSettings();
+    if (!window._examMaxScoresByGrade) window._examMaxScoresByGrade = {};
+    window._examMaxScoresByGrade[grade] = settings;
+    return settings;
+  }
+}
+
+// ✅ دالة لتحميل إعدادات جميع الصفوف مرة واحدة
+async function preloadAllGradeSettings() {
+  try {
+    const snap = await db.ref(`monthData/${currentMonth}/_examMaxScores`).once('value');
+    const allSettings = snap.val() || {};
+    
+    // تحديث الـ Cache لجميع الصفوف
+    if (!window._examMaxScoresByGrade) window._examMaxScoresByGrade = {};
+    
+    // للصفوف الموجودة في قاعدة البيانات
+    Object.keys(allSettings).forEach(grade => {
+      window._examMaxScoresByGrade[grade] = allSettings[grade];
+    });
+    
+    // للصفوف الموجودة في الطلاب لكن لم تُحفظ إعداداتها بعد
+    const uniqueGrades = [...new Set(Object.values(students).map(s => s.grade))];
+    uniqueGrades.forEach(grade => {
+      if (grade && !window._examMaxScoresByGrade[grade]) {
+        window._examMaxScoresByGrade[grade] = getDefaultGradeSettings();
+      }
+    });
+    
+    console.log('✅ تم تحميل إعدادات الدرجات لجميع الصفوف:', window._examMaxScoresByGrade);
+  } catch (err) {
+    console.error('خطأ في تحميل إعدادات الدرجات:', err);
+    // في حالة الخطأ، استخدام القيم الافتراضية لجميع الصفوف
+    if (!window._examMaxScoresByGrade) window._examMaxScoresByGrade = {};
+    const uniqueGrades = [...new Set(Object.values(students).map(s => s.grade))];
+    uniqueGrades.forEach(grade => {
+      if (grade && !window._examMaxScoresByGrade[grade]) {
+        window._examMaxScoresByGrade[grade] = getDefaultGradeSettings();
+      }
+    });
+  }
 }
 
 function displayGradeSettings(grade) {
@@ -3273,37 +3346,23 @@ function displayGradeSettings(grade) {
   card.style.display = 'block';
   document.getElementById('settingsGradeName').textContent = grade;
   
-  // قراءة من monthData/{month}/_examMaxScores/{grade}
-  db.ref(`monthData/${currentMonth}/_examMaxScores/${grade}`).once('value', snap => {
-    const settings = snap.val() || getDefaultGradeSettings();
-    
-    // تحديث الـ Cache
-    if (!window._examMaxScoresByGrade) window._examMaxScoresByGrade = {};
-    window._examMaxScoresByGrade[grade] = settings;
-    
-    let total = 0;
-    for (let i = 1; i <= 8; i++) {
-      // ✅ استخدام != null للحفاظ على الصفر
-      const val = settings[`e${i}`] != null ? settings[`e${i}`] : 10;
-      document.getElementById(`examMax${i}`).value = val;
-      if (val > 0) total += val;
-    }
-    
-    updateTotalDisplay();
-    
-    // Update display on input change
-    for (let i = 1; i <= 8; i++) {
-      document.getElementById(`examMax${i}`).oninput = () => updateTotalDisplay();
-    }
-  }).catch(err => {
-    console.error('خطأ في قراءة إعدادات الدرجات:', err);
-    // استخدام القيم الافتراضية
-    const settings = getDefaultGradeSettings();
-    for (let i = 1; i <= 8; i++) {
-      document.getElementById(`examMax${i}`).value = settings[`e${i}`];
-    }
-    updateTotalDisplay();
-  });
+  // قراءة من الـ Cache (تم تحميله مسبقاً)
+  const settings = window._examMaxScoresByGrade?.[grade] || getDefaultGradeSettings();
+  
+  let total = 0;
+  for (let i = 1; i <= 8; i++) {
+    // ✅ استخدام != null للحفاظ على الصفر
+    const val = settings[`e${i}`] != null ? settings[`e${i}`] : 10;
+    document.getElementById(`examMax${i}`).value = val;
+    if (val > 0) total += val;
+  }
+  
+  updateTotalDisplay();
+  
+  // Update display on input change
+  for (let i = 1; i <= 8; i++) {
+    document.getElementById(`examMax${i}`).oninput = () => updateTotalDisplay();
+  }
 }
 
 function updateTotalDisplay() {
@@ -3331,7 +3390,10 @@ function getGradeMaxScore(grade, examNum) {
 function getGradeTotalMax(grade) {
   // القراءة من Cache
   const examMaxScores = window._examMaxScoresByGrade?.[grade];
-  if (!examMaxScores) return 80; // افتراضي: 8 امتحانات × 10
+  if (!examMaxScores) {
+    console.warn(`⚠️ لم يتم العثور على إعدادات درجات للصف "${grade}" في الـ Cache. استخدام القيمة الافتراضية.`);
+    return 80; // افتراضي: 8 امتحانات × 10
+  }
   
   let total = 0;
   for (let i = 1; i <= 8; i++) {
@@ -5219,7 +5281,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 </script>
-
 <script>
 // =============================================
 // GRADE CONVERTER FUNCTIONS
