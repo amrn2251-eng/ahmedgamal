@@ -1,4 +1,4 @@
-hkh <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -539,13 +539,13 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     </div>
     <div id="teacherLoginForm">
       <div class="form-group">
-        <label>رقم الهاتف</label>
-        <input type="tel" id="loginPhone" class="form-control" placeholder="01XXXXXXXXX" value="01144057841" autocomplete="username">
+        <label for="loginPhone">رقم الهاتف</label>
+        <input type="tel" id="loginPhone" name="loginPhone" class="form-control" placeholder="01XXXXXXXXX" value="01144057841" autocomplete="username">
       </div>
       <div class="form-group">
-        <label>كلمة المرور</label>
+        <label for="loginPass">كلمة المرور</label>
         <div style="position:relative">
-          <input type="password" id="loginPass" class="form-control" placeholder="••••••••" style="padding-left:40px" autocomplete="current-password">
+          <input type="password" id="loginPass" name="loginPass" class="form-control" placeholder="••••••••" style="padding-left:40px" autocomplete="current-password">
           <button type="button" onclick="togglePassVis('loginPass','eyeLogin')" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:1rem">
             <i class="fas fa-eye" id="eyeLogin"></i>
           </button>
@@ -563,13 +563,13 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         </button>
       </div>
       <div id="parentPhoneField" class="form-group">
-        <label>رقم الواتساب المسجل</label>
-        <input type="tel" id="parentPhone" class="form-control" placeholder="01XXXXXXXXX"
+        <label for="parentPhone">رقم الواتساب المسجل</label>
+        <input type="tel" id="parentPhone" name="parentPhone" class="form-control" placeholder="01XXXXXXXXX"
           onkeydown="if(event.key==='Enter') doParentLogin()">
       </div>
       <div id="parentCodeField" class="form-group" style="display:none">
-        <label>كود الطالب</label>
-        <input type="text" id="parentCodeInput" class="form-control" placeholder="أدخل كود الطالب"
+        <label for="parentCodeInput">كود الطالب</label>
+        <input type="text" id="parentCodeInput" name="parentCodeInput" class="form-control" placeholder="أدخل كود الطالب"
           onkeydown="if(event.key==='Enter') doParentLogin()">
       </div>
       <button class="btn-primary" onclick="doParentLogin()"><i class="fas fa-sign-in-alt"></i> عرض بيانات ابني</button>
@@ -616,9 +616,6 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     </div>
     <div class="nav-item" onclick="showTab('barcode')" id="nav-barcode">
       <i class="fas fa-barcode"></i><span class="nav-label">ماسح الباركود</span>
-    </div>
-    <div class="nav-item" onclick="showTab('gradeConverter')" id="nav-gradeConverter">
-      <i class="fas fa-calculator"></i><span class="nav-label">تحويل الدرجات</span>
     </div>
     <div class="nav-item" onclick="showTab('reports')" id="nav-reports">
       <i class="fas fa-file-alt"></i><span class="nav-label">التقارير</span>
@@ -720,36 +717,36 @@ textarea.form-control { resize: vertical; min-height: 80px; }
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-bottom:12px">
             <div>
-              <label style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">ا1</label>
-              <input type="number" id="examMax1" class="form-control" placeholder="10" min="0" style="text-align:center;padding:8px">
+              <label for="examMax1" style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">ا1</label>
+              <input type="number" id="examMax1" name="examMax1" class="form-control" placeholder="10" min="0" style="text-align:center;padding:8px">
             </div>
             <div>
-              <label style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">ا2</label>
-              <input type="number" id="examMax2" class="form-control" placeholder="10" min="0" style="text-align:center;padding:8px">
+              <label for="examMax2" style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">ا2</label>
+              <input type="number" id="examMax2" name="examMax2" class="form-control" placeholder="10" min="0" style="text-align:center;padding:8px">
             </div>
             <div>
-              <label style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">ا3</label>
-              <input type="number" id="examMax3" class="form-control" placeholder="10" min="0" style="text-align:center;padding:8px">
+              <label for="examMax3" style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">ا3</label>
+              <input type="number" id="examMax3" name="examMax3" class="form-control" placeholder="10" min="0" style="text-align:center;padding:8px">
             </div>
             <div>
-              <label style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">ا4</label>
-              <input type="number" id="examMax4" class="form-control" placeholder="10" min="0" style="text-align:center;padding:8px">
+              <label for="examMax4" style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">ا4</label>
+              <input type="number" id="examMax4" name="examMax4" class="form-control" placeholder="10" min="0" style="text-align:center;padding:8px">
             </div>
             <div>
-              <label style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">ا5</label>
-              <input type="number" id="examMax5" class="form-control" placeholder="10" min="0" style="text-align:center;padding:8px">
+              <label for="examMax5" style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">ا5</label>
+              <input type="number" id="examMax5" name="examMax5" class="form-control" placeholder="10" min="0" style="text-align:center;padding:8px">
             </div>
             <div>
-              <label style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">ا6</label>
-              <input type="number" id="examMax6" class="form-control" placeholder="10" min="0" style="text-align:center;padding:8px">
+              <label for="examMax6" style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">ا6</label>
+              <input type="number" id="examMax6" name="examMax6" class="form-control" placeholder="10" min="0" style="text-align:center;padding:8px">
             </div>
             <div>
-              <label style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">ا7</label>
-              <input type="number" id="examMax7" class="form-control" placeholder="10" min="0" style="text-align:center;padding:8px">
+              <label for="examMax7" style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">ا7</label>
+              <input type="number" id="examMax7" name="examMax7" class="form-control" placeholder="10" min="0" style="text-align:center;padding:8px">
             </div>
             <div>
-              <label style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">ا8</label>
-              <input type="number" id="examMax8" class="form-control" placeholder="∞" min="0" style="text-align:center;padding:8px">
+              <label for="examMax8" style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">ا8</label>
+              <input type="number" id="examMax8" name="examMax8" class="form-control" placeholder="∞" min="0" style="text-align:center;padding:8px">
             </div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -763,8 +760,8 @@ textarea.form-control { resize: vertical; min-height: 80px; }
       <!-- Quick attendance input -->
       <div class="card" style="padding:14px 18px;margin-bottom:12px">
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <label style="color:var(--text-secondary);font-size:0.9rem;white-space:nowrap">كود الطالب:</label>
-          <input type="text" id="quickAttCode" class="form-control" placeholder="أدخل الكود واضغط Enter" style="max-width:220px"
+          <label for="quickAttCode" style="color:var(--text-secondary);font-size:0.9rem;white-space:nowrap">كود الطالب:</label>
+          <input type="text" id="quickAttCode" name="quickAttCode" class="form-control" placeholder="أدخل الكود واضغط Enter" style="max-width:220px"
             onkeydown="if(event.key==='Enter') quickAttendance()">
           <button class="btn btn-success btn-sm" onclick="quickAttendance()"><i class="fas fa-bolt"></i> تسجيل حضور</button>
           <div id="attSummary" class="att-summary" style="display:none"></div>
@@ -829,109 +826,6 @@ textarea.form-control { resize: vertical; min-height: 80px; }
             <button class="btn btn-sm btn-secondary" onclick="clearScanHistory()">مسح</button>
           </div>
           <div id="scanHistoryList"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- GRADE CONVERTER TAB -->
-    <div class="tab-page" id="tab-gradeConverter">
-      <div class="page-header">
-        <div class="page-title"><i class="fas fa-calculator"></i> تحويل الدرجات وإرسال واتساب</div>
-      </div>
-
-      <!-- تنبيه مهم -->
-      <div class="card" style="border:2px solid var(--warning);background:rgba(212,160,23,0.1);margin-bottom:20px">
-        <div style="display:flex;align-items:start;gap:12px">
-          <i class="fas fa-info-circle" style="color:var(--warning);font-size:1.8rem;flex-shrink:0"></i>
-          <div>
-            <h3 style="color:var(--warning);margin-bottom:8px;font-size:1.05rem">⚠️ مهم جداً - الفكرة:</h3>
-            <ul style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6;margin:0;padding-right:18px">
-              <li>هذه الأداة <strong>لتحويل الدرجات وإرسالها فقط</strong> - لا تحفظ أو تعدل شيء في قاعدة البيانات</li>
-              <li>الدرجة المحفوظة في المنصة تظل كما هي (مثال: 8 من 10)</li>
-              <li>الدرجة المرسلة لولي الأمر تكون محولة (مثال: 12 من 15)</li>
-              <li>لو ولي الأمر دخل المنصة الأصلية سيجد الدرجة الحقيقية (8 من 10) وليس المحولة</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <!-- حاسبة التحويل السريع -->
-      <div class="card" style="border-color:var(--accent)">
-        <div class="card-header">
-          <span class="card-title"><i class="fas fa-bolt" style="color:var(--accent)"></i> حاسبة التحويل السريع</span>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px">
-          <div class="form-group" style="margin-bottom:0">
-            <label>الدرجة القصوى الأصلية (في المنصة) <span style="color:var(--danger)">*</span></label>
-            <input type="number" id="quickOrigMax" class="form-control" placeholder="مثال: 10" min="0" value="10">
-          </div>
-          <div class="form-group" style="margin-bottom:0">
-            <label>الدرجة القصوى المستهدفة (للإرسال) <span style="color:var(--danger)">*</span></label>
-            <input type="number" id="quickTargetMax" class="form-control" placeholder="مثال: 15" min="0" value="15">
-          </div>
-          <div class="form-group" style="margin-bottom:0">
-            <label>درجة الطالب الحالية <span style="color:var(--danger)">*</span></label>
-            <input type="number" id="quickStudentScore" class="form-control" placeholder="مثال: 8" min="0">
-          </div>
-        </div>
-        <button class="btn btn-primary" onclick="calculateQuickConversion()"><i class="fas fa-calculator"></i> احسب التحويل</button>
-        <div id="quickResult" style="display:none;margin-top:16px;padding:16px;background:var(--bg-card2);border-radius:var(--radius-sm);border:1px solid var(--border)">
-          <div style="font-size:1.1rem;font-weight:700;color:var(--accent);margin-bottom:6px" id="quickResultText"></div>
-          <div style="font-size:0.88rem;color:var(--text-secondary)" id="quickResultFormula"></div>
-        </div>
-      </div>
-
-      <!-- إعدادات الإرسال الجماعي -->
-      <div class="card" style="border-color:rgba(37,211,102,0.4)">
-        <div class="card-header">
-          <span class="card-title"><i class="fab fa-whatsapp" style="color:#25d366"></i> إعدادات الإرسال الجماعي</span>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
-          <div class="form-group" style="margin-bottom:0">
-            <label>الدرجة القصوى الأصلية (في المنصة) <span style="color:var(--danger)">*</span></label>
-            <input type="number" id="batchOrigMax" class="form-control" placeholder="مثال: 10" min="0" value="10" oninput="updateBatchTable()">
-          </div>
-          <div class="form-group" style="margin-bottom:0">
-            <label>الدرجة القصوى المستهدفة (للإرسال) <span style="color:var(--danger)">*</span></label>
-            <input type="number" id="batchTargetMax" class="form-control" placeholder="مثال: 15" min="0" value="15" oninput="updateBatchTable()">
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <button class="btn btn-primary" onclick="addStudentRow()"><i class="fas fa-plus"></i> إضافة طالب</button>
-          <button class="btn btn-success" onclick="sendToAll()"><i class="fab fa-whatsapp"></i> إرسال للكل</button>
-          <button class="btn btn-danger" onclick="clearBatchTable()"><i class="fas fa-trash"></i> مسح الجدول</button>
-          <button class="btn btn-secondary" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
-        </div>
-      </div>
-
-      <!-- جدول الطلاب -->
-      <div class="card" style="padding:0">
-        <div class="card-header" style="padding:14px 18px">
-          <span class="card-title">قائمة الطلاب والدرجات</span>
-          <span class="badge badge-accent" id="batchCount">0 طالب</span>
-        </div>
-        <div class="table-wrap">
-          <table id="gradeConvTable">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th style="min-width:180px">اسم الطالب</th>
-                <th style="min-width:140px">رقم واتساب ولي الأمر</th>
-                <th style="min-width:100px">الدرجة الأصلية</th>
-                <th style="min-width:100px">الدرجة المحولة</th>
-                <th>النسبة %</th>
-                <th style="min-width:120px">إجراءات</th>
-              </tr>
-            </thead>
-            <tbody id="gradeConvBody">
-              <tr>
-                <td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">
-                  <i class="fas fa-users" style="font-size:2.5rem;opacity:0.3;display:block;margin-bottom:12px"></i>
-                  اضغط "إضافة طالب" لبدء الجدول
-                </td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       </div>
     </div>
@@ -1195,12 +1089,12 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>اسم الطالب <span style="color:var(--danger)">*</span></label>
-        <input type="text" id="sName" class="form-control" placeholder="الاسم كاملاً">
+        <label for="sName">اسم الطالب <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="sName" name="sName" class="form-control" placeholder="الاسم كاملاً">
       </div>
       <div class="form-group">
-        <label>رقم الواتساب</label>
-        <input type="tel" id="sPhone" class="form-control" placeholder="01XXXXXXXXX">
+        <label for="sPhone">رقم الواتساب</label>
+        <input type="tel" id="sPhone" name="sPhone" class="form-control" placeholder="01XXXXXXXXX">
         <div style="margin-top:6px;display:flex;align-items:center;gap:6px;">
           <input type="checkbox" id="sNoWA" onchange="toggleNoWA()" style="accent-color:var(--accent);width:14px;height:14px;cursor:pointer;">
           <label for="sNoWA" style="margin:0;font-size:0.82rem;color:var(--text-muted);cursor:pointer;">ليس لديه واتساب</label>
@@ -1224,8 +1118,8 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     <div id="privateFields">
       <div class="form-row">
         <div class="form-group">
-          <label>سعر الاشتراك الشهري (جنيه)</label>
-          <input type="number" id="sMonthlyFee" class="form-control" placeholder="0" min="0">
+          <label for="sMonthlyFee">سعر الاشتراك الشهري (جنيه)</label>
+          <input type="number" id="sMonthlyFee" name="sMonthlyFee" class="form-control" placeholder="0" min="0">
         </div>
         <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:6px">
           <div style="display:flex;align-items:center;gap:8px;margin-top:auto">
@@ -1238,18 +1132,18 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     <!-- حقول السنتر -->
     <div id="centerFields" style="display:none">
       <div class="form-group">
-        <label>اسم السنتر <span style="color:var(--danger)">*</span></label>
-        <input type="text" id="sCenterName" class="form-control" placeholder="مثال: سنتر النخبة">
+        <label for="sCenterName">اسم السنتر <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="sCenterName" name="sCenterName" class="form-control" placeholder="مثال: سنتر النخبة">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>الكود المخصص <span style="color:var(--danger)">*</span></label>
-        <input type="text" id="sCode" class="form-control" placeholder="كود فريد للطالب">
+        <label for="sCode">الكود المخصص <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="sCode" name="sCode" class="form-control" placeholder="كود فريد للطالب">
       </div>
       <div class="form-group">
-        <label>تاريخ الانضمام</label>
-        <input type="date" id="sJoinDate" class="form-control">
+        <label for="sJoinDate">تاريخ الانضمام</label>
+        <input type="date" id="sJoinDate" name="sJoinDate" class="form-control">
       </div>
     </div>
     <div class="form-row">
@@ -1774,9 +1668,13 @@ function onMonthChange() {
 
 function populateGradeSelects() {
   const ids = ['studGradeFilter','attGradeFilter','sGrade','schGrade','barcodeGrade','rptGradeFilter'];
+  console.log('🎓 populateGradeSelects استُدعيت - الصفوف:', GRADES);
   ids.forEach(id => {
     const el = document.getElementById(id);
-    if (!el) return;
+    if (!el) {
+      console.warn(`⚠️ لم يتم العثور على العنصر: ${id}`);
+      return;
+    }
     const hasAll = id.endsWith('Filter') || id === 'rptGradeFilter';
     if (hasAll) { el.innerHTML = `<option value="">${id==='attGradeFilter'?'-- اختر الصف --':'كل الصفوف'}</option>`; }
     else { el.innerHTML = ''; }
@@ -1785,6 +1683,7 @@ function populateGradeSelects() {
       opt.value = g; opt.textContent = g;
       el.appendChild(opt);
     });
+    console.log(`✅ تم ملء ${id} بـ ${GRADES.length} صف`);
   });
 }
 
@@ -1972,6 +1871,13 @@ function _enterParentMode(displayName) {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('topbarUser').textContent = displayName;
+  
+  // ✅ إخفاء اختيار الشهر والعام لولي الأمر
+  const yearSelector = document.getElementById('yearSelector');
+  const monthSelector = document.getElementById('monthSelector');
+  if (yearSelector) yearSelector.style.display = 'none';
+  if (monthSelector) monthSelector.style.display = 'none';
+  
   // أخفِ كل عناصر الناف
   document.querySelectorAll('.nav-item').forEach(n => n.style.display = 'none');
   // أخفِ كل الـ tabs وأظهر tab-parent فقط
@@ -2416,7 +2322,9 @@ function loadStudents() {
   return new Promise(resolve => {
     db.ref('students').on('value', async snap => {
       students = snap.val() || {};
-      if (currentUser === 'admin') {
+      console.log('👥 تم تحميل الطلاب:', Object.keys(students).length);
+      
+      if (currentUser === 'admin' || currentUser === 'assistant' || currentUser === 'observer') {
         // ✅ تحميل إعدادات الدرجات أولاً
         await preloadAllGradeSettings();
         
@@ -2435,9 +2343,13 @@ function loadStudents() {
 
 function loadMonthData() {
   return new Promise(resolve => {
+    // ✅ إيقاف الاستماع للمسار القديم أولاً
+    db.ref(`monthData/${currentMonth}`).off();
+    
+    // ✅ بدء الاستماع للمسار الجديد
     db.ref(`monthData/${currentMonth}`).on('value', async snap => {
       monthData = snap.val() || {};
-      if (currentUser === 'admin') {
+      if (currentUser === 'admin' || currentUser === 'assistant' || currentUser === 'observer') {
         // ✅ تحميل إعدادات الدرجات لجميع الصفوف أولاً
         await preloadAllGradeSettings();
         
@@ -3006,6 +2918,9 @@ async function renderAttendanceTable() {
   const tbody = document.getElementById('attendanceBody');
   if (!tbody) return;
   
+  console.log('🔍 renderAttendanceTable استُدعيت - الصف:', grade);
+  console.log('📊 عدد الطلاب الكلي:', Object.keys(students).length);
+  
   if (!grade) {
     tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><i class="fas fa-filter"></i><p>اختر الصف أولاً</p></div></td></tr>`;
     document.getElementById('attSummary').style.display = 'none';
@@ -3020,8 +2935,12 @@ async function renderAttendanceTable() {
   displayGradeSettings(grade);
   
   let rows = Object.values(students).filter(s => s.grade === grade);
+  console.log('📝 طلاب الصف', grade, ':', rows.length);
+  
   // فلتر حسب نوع المساعد
   rows = _filterByAssistantType(rows);
+  console.log('✅ بعد الفلتر:', rows.length);
+  
   rows.sort((a,b) => (a.name||'').localeCompare(b.name||'','ar'));
 
   // Build rows using buildAttRow
