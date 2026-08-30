@@ -2348,14 +2348,14 @@ function renderArchiveTable() {
     (s.customCode||'').toLowerCase().includes(search)
   );
   rows.sort((a,b) => {
-    const aScore = calcTotalScore(a.monthData || {});
-    const bScore = calcTotalScore(b.monthData || {});
+    const aScore = calcTotalScore(a.monthData || {}, a.grade);
+    const bScore = calcTotalScore(b.monthData || {}, b.grade);
     return bScore - aScore;
   });
   const ranks = {};
   GRADES.forEach(g => {
     const gs = Object.values(archivedMonthData.students).filter(s => s.grade === g);
-    gs.sort((a,b) => calcTotalScore(b.monthData||{}) - calcTotalScore(a.monthData||{}));
+    gs.sort((a,b) => calcTotalScore(b.monthData||{}, b.grade) - calcTotalScore(a.monthData||{}, a.grade));
     gs.forEach((s,i) => { ranks[s.customCode] = i; });
   });
   const rankEmoji = ['🥇','🥈','🥉'];
@@ -2371,7 +2371,8 @@ function renderArchiveTable() {
           <tbody>${rows.map((s,i) => {
             const md = s.monthData || {};
             const att = countAttendance(md);
-            const score = calcTotalScore(md);
+            const score = calcTotalScore(md, s.grade);
+            const totalMax = getGradeTotalMax(s.grade);
             const rk = ranks[s.customCode];
             const rkTxt = rk !== undefined && rk < 3 ? rankEmoji[rk] : '-';
             const payTxt = s.type === 'private'
@@ -2383,7 +2384,7 @@ function renderArchiveTable() {
               <td><span class="badge badge-accent" style="font-size:0.75rem">${s.grade}</span></td>
               <td><code style="background:var(--bg-card2);padding:2px 6px;border-radius:4px">${s.customCode||'-'}</code></td>
               <td><span class="badge ${att>0?'badge-success':'badge-secondary'}">${att}/8</span></td>
-              <td>${score}</td>
+              <td>${score}/${totalMax}</td>
               <td>${rkTxt}</td>
               <td>${payTxt}</td>
             </tr>`;
@@ -2802,7 +2803,7 @@ function renderStudentsTable() {
       <td><span class="badge ${s.type==='private'?'badge-info':'badge-secondary'}">${s.type==='private'?'برايفيت':'سنتر'}</span></td>
       <td>${isLeft ? '<span class="badge badge-secondary">—</span>' : payCell}</td>
       <td><span class="${attendance>0?'badge badge-success':'badge badge-secondary'}">${attendance}/8</span></td>
-      <td>${totalScore}/80</td>
+      <td>${totalScore}/${getGradeTotalMax(s.grade)}</td>
       <td>${isLeft ? '<span style="color:var(--text-muted);font-size:0.8rem">—</span>' : rankTxt}</td>
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap">
@@ -2857,7 +2858,7 @@ function openStudentDetail(id) {
     <div style="font-weight:700;margin-bottom:8px;color:var(--accent)">📅 ${formatMonthLabel(currentMonth)}</div>
     <div class="form-row">
       <div class="info-row"><span class="info-label">الحضور</span><span class="info-val">${attendance}/8</span></div>
-      <div class="info-row"><span class="info-label">مجموع الدرجات</span><span class="info-val">${totalScore}/80</span></div>
+      <div class="info-row"><span class="info-label">مجموع الدرجات</span><span class="info-val">${totalScore}/${getGradeTotalMax(s.grade)}</span></div>
     </div>
     ${s.type==='private'?`<div class="info-row"><span class="info-label">الدفع</span><span class="info-val">${md.paid
         ? `<span class="badge badge-success">مدفوع ${md.payDate||''}</span> <button class="btn btn-xs btn-danger" onclick="confirmUnpay('${s.id}');closeModal('studentDetailModal')"><i class="fas fa-undo"></i> إلغاء</button>`
@@ -2964,7 +2965,7 @@ function renderHonorRoll() {
             <div class="rank-name">${s.name}</div>
             <div class="rank-score">
               <span style="color:var(--accent);font-weight:700">${s.score}</span>
-              <span style="color:var(--text-muted)">/80 درجة</span>
+              <span style="color:var(--text-muted)">/${getGradeTotalMax(grade)} درجة</span>
             </div>
           </div>
         </div>`;
@@ -3659,12 +3660,12 @@ function renderReports() {
         <tbody>${pending.map(s => {
           const md = monthData[s.id] || {};
           const att = countAttendance(md);
-          const score = calcTotalScore(md);
+          const score = calcTotalScore(md, s.grade);
           return `<tr>
             <td><strong>${s.name}</strong></td>
             <td><span class="badge badge-accent" style="font-size:0.75rem">${s.grade}</span></td>
             <td>${att}/8</td>
-            <td>${score}/80</td>
+            <td>${score}/${getGradeTotalMax(s.grade)}</td>
             <td><button class="btn btn-sm" style="background:rgba(37,211,102,0.15);color:#25d366;border:1px solid rgba(37,211,102,0.3)" onclick="sendMonthlyReport('${s.id}','${targetFlag}')"><i class="fab fa-whatsapp"></i> إرسال</button></td>
           </tr>`;
         }).join('')}</tbody>
@@ -4689,7 +4690,7 @@ function buildParentStudentCard(id) {
       <div class="parent-card-body">
         <div style="font-size:0.85rem;color:var(--accent);font-weight:700;margin-bottom:10px">📅 ${formatMonthLabel(currentMonth)}</div>
         <div class="info-row"><span class="info-label">الحضور</span><span class="info-val">${attendance}/8 حصص</span></div>
-        <div class="info-row"><span class="info-label">مجموع الدرجات</span><span class="info-val">${totalScore}/80</span></div>
+        <div class="info-row"><span class="info-label">مجموع الدرجات</span><span class="info-val">${totalScore}/${getGradeTotalMax(s.grade)}</span></div>
         ${s.type==='private'?`<div class="info-row"><span class="info-label">الدفع</span><span class="info-val">${md.paid?`<span class="badge badge-success">مدفوع ${md.payDate||''}</span>`:'<span class="badge badge-danger">غير مدفوع</span>'}</span></div>`:''}
         <div class="info-row"><span class="info-label">المركز</span><span class="info-val" style="font-size:0.85rem">${rankTxt}</span></div>
         <div style="margin-top:14px"><div style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:6px">الحضور التفصيلي:</div>${sessHtml}</div>
