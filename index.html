@@ -764,6 +764,9 @@ textarea.form-control { resize: vertical; min-height: 80px; }
           <input type="text" id="quickAttCode" name="quickAttCode" class="form-control" placeholder="أدخل الكود واضغط Enter" style="max-width:220px"
             onkeydown="if(event.key==='Enter') quickAttendance()">
           <button class="btn btn-success btn-sm" onclick="quickAttendance()"><i class="fas fa-bolt"></i> تسجيل حضور</button>
+          
+          <!-- 🔍 زر التشخيص -->
+          
           <div id="attSummary" class="att-summary" style="display:none"></div>
         </div>
       </div>
@@ -1534,7 +1537,7 @@ const db = firebase.database();
 const GRADES = [
   'الرابع الابتدائي','الخامس الابتدائي','السادس الابتدائي',
   'الأول الإعدادي','الثاني الإعدادي','الثالث الإعدادي','الأول الثانوي'
-];
+].map(g => g.trim().replace(/\s+/g, ' ')); // ⭐ تطبيع جميع المراحل عند التعريف
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو',
   'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 const ADMIN_PHONE = '01144057841';
@@ -1680,7 +1683,10 @@ function populateGradeSelects() {
     else { el.innerHTML = ''; }
     GRADES.forEach(g => {
       const opt = document.createElement('option');
-      opt.value = g; opt.textContent = g;
+      // ⭐ تطبيع القيمة لضمان التوافق
+      const normalizedGrade = normalizeGrade(g);
+      opt.value = normalizedGrade; 
+      opt.textContent = normalizedGrade;
       el.appendChild(opt);
     });
     console.log(`✅ تم ملء ${id} بـ ${GRADES.length} صف`);
@@ -2493,12 +2499,22 @@ function _filterByAssistantType(rows) {
   if (currentUser !== 'assistant') return rows;
   if (currentAssistantType === 'general') return rows;
   if (currentAssistantType === 'private') return rows.filter(s => s.type === 'private');
-  // center - لازم يكون عنده centerName محدد وإلا بيشوف لا شيء
-  if (!currentAssistantCenter.trim()) return [];
-  return rows.filter(s =>
-    s.type === 'center' &&
-    (s.centerName||'').trim().toLowerCase() === currentAssistantCenter.trim().toLowerCase()
-  );
+  
+  // center - لازم يكون عنده centerName محدد
+  if (currentAssistantType === 'center') {
+    if (!currentAssistantCenter || !currentAssistantCenter.trim()) {
+      console.warn('⚠️ المساعد من نوع center لكن لم يُحدد اسم السنتر! عرض جميع طلاب السنترات');
+      // عرض جميع طلاب السنترات بدلاً من إرجاع مصفوفة فارغة
+      return rows.filter(s => s.type === 'center');
+    }
+    return rows.filter(s =>
+      s.type === 'center' &&
+      (s.centerName||'').trim().toLowerCase() === currentAssistantCenter.trim().toLowerCase()
+    );
+  }
+  
+  // افتراضي: عرض الجميع
+  return rows;
 }
 
 function toggleStudentTypeFields() {
@@ -2561,7 +2577,7 @@ function saveStudent() {
   const name      = document.getElementById('sName').value.trim();
   const noWA      = document.getElementById('sNoWA').checked;
   const phone     = noWA ? 'none' : document.getElementById('sPhone').value.trim();
-  const grade     = document.getElementById('sGrade').value;
+  const grade     = normalizeGrade(document.getElementById('sGrade').value); // ⭐ تطبيع المرحلة
   const type      = document.getElementById('sType').value;
   const code      = document.getElementById('sCode').value.trim();
   const notes     = document.getElementById('sNotes').value.trim();
@@ -2679,7 +2695,7 @@ function renderStudentsTable() {
   // فلتر حسب نوع المساعد
   rows = _filterByAssistantType(rows);
   // Always show all students in the table (including left), but mark them
-  if (grade) rows = rows.filter(s => s.grade === grade);
+  if (grade) rows = rows.filter(s => gradesMatch(s.grade, grade));
   if (type && currentUser === 'admin') rows = rows.filter(s => s.type === type);
   if (search) rows = rows.filter(s =>
     (s.name||'').toLowerCase().includes(search) ||
@@ -2797,6 +2813,17 @@ function openStudentDetail(id) {
 // =============================================
 // HELPERS
 // =============================================
+
+// دالة لتطبيع نصوص المراحل الدراسية (إزالة مسافات زائدة وتوحيد التنسيق)
+function normalizeGrade(grade) {
+  return (grade || '').trim().replace(/\s+/g, ' ');
+}
+
+// دالة للمقارنة الآمنة بين المراحل الدراسية
+function gradesMatch(grade1, grade2) {
+  return normalizeGrade(grade1) === normalizeGrade(grade2);
+}
+
 function countAttendance(md) {
   if (!md || !md.sessions) return 0;
   return Object.values(md.sessions).filter(v => v === true).length;
@@ -2837,7 +2864,7 @@ function computeRanks(monthKey) {
   const result = {};
   GRADES.forEach(grade => {
     // Exclude students who left
-    const gradeStudents = Object.values(students).filter(s => s.grade === grade && (s.status||'active') === 'active');
+    const gradeStudents = Object.values(students).filter(s => gradesMatch(s.grade, grade) && (s.status||'active') === 'active');
     const scored = gradeStudents.map(s => ({
       id: s.id, name: s.name,
       score: calcTotalScore(md[s.id] || {}, s.grade)
@@ -2902,7 +2929,7 @@ function computeRanksSync(monthKey) {
   const md = (monthKey === currentMonth) ? monthData : {};
   const result = {};
   GRADES.forEach(grade => {
-    const gs = Object.values(students).filter(s => s.grade === grade);
+    const gs = Object.values(students).filter(s => gradesMatch(s.grade, grade));
     const scored = gs.map(s => ({ id:s.id, name:s.name, score: calcTotalScore(md[s.id]||{}, s.grade) }));
     scored.sort((a,b) => b.score - a.score);
     result[grade] = scored;
@@ -2914,103 +2941,187 @@ function computeRanksSync(monthKey) {
 // ATTENDANCE TABLE
 // =============================================
 async function renderAttendanceTable() {
-  const grade = document.getElementById('attGradeFilter')?.value || '';
-  const tbody = document.getElementById('attendanceBody');
-  if (!tbody) return;
-  
-  console.log('🔍 renderAttendanceTable استُدعيت - الصف:', grade);
-  console.log('📊 عدد الطلاب الكلي:', Object.keys(students).length);
-  
-  if (!grade) {
-    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><i class="fas fa-filter"></i><p>اختر الصف أولاً</p></div></td></tr>`;
-    document.getElementById('attSummary').style.display = 'none';
-    document.getElementById('gradeSettingsCard').style.display = 'none';
-    return;
+  try {
+    const grade = document.getElementById('attGradeFilter')?.value || '';
+    const tbody = document.getElementById('attendanceBody');
+    
+    console.log('🔍 renderAttendanceTable استُدعيت - الصف:', grade);
+    console.log('📊 عدد الطلاب الكلي:', Object.keys(students).length);
+    
+    // ⭐ نقطة فحص 1
+    console.log('⭐ نقطة فحص 1: بدأنا الدالة');
+    
+    if (!tbody) {
+      console.error('❌ لم يتم العثور على attendanceBody!');
+      return;
+    }
+    
+    console.log('⭐ نقطة فحص 2: tbody موجود');
+    
+    if (!grade) {
+      console.log('⭐ لا يوجد صف مختار - عرض رسالة "اختر الصف"');
+      tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><i class="fas fa-filter"></i><p>اختر الصف أولاً</p></div></td></tr>`;
+      const summaryEl = document.getElementById('attSummary');
+      const settingsEl = document.getElementById('gradeSettingsCard');
+      if (summaryEl) summaryEl.style.display = 'none';
+      if (settingsEl) settingsEl.style.display = 'none';
+      return;
+    }
+    
+    console.log('⭐ نقطة فحص 3: صف مختار =', grade);
+    
+    try {
+      console.log('⏳ جاري تحميل إعدادات الدرجات...');
+      await loadGradeSettings(grade);
+      console.log('✅ تم تحميل إعدادات الدرجات');
+    } catch (err) {
+      console.warn('⚠️ تعذر تحميل إعدادات الدرجات، استخدام الافتراضية:', err);
+      // استمر في العرض حتى لو فشل التحميل
+    }
+    
+    console.log('⭐ نقطة فحص 4: بعد loadGradeSettings - الاستمرار في العرض');
+    
+    // عرض بطاقة إعدادات الدرجات
+    displayGradeSettings(grade);
+    
+    console.log('⭐ نقطة فحص 5: بعد displayGradeSettings');
+    
+    const allStudents = Object.values(students);
+    console.log('👥 جميع الطلاب:', allStudents.length);
+    console.log('👥 أول 3 طلاب:', allStudents.slice(0, 3).map(s => `${s.name} - صف: ${s.grade}`));
+    
+    // ⭐ استخدام دالة المقارنة الآمنة
+    console.log('🔍 المرحلة المختارة:', `"${grade}"`);
+    
+    let rows = allStudents.filter(s => gradesMatch(s.grade, grade));
+    
+    console.log('📝 طلاب الصف', grade, ':', rows.length);
+    
+    if (rows.length === 0) {
+      console.warn('⚠️ لم يتم العثور على طلاب. الصفوف الموجودة في البيانات:');
+      const uniqueGrades = [...new Set(allStudents.map(s => s.grade))];
+      console.log('الصفوف:', uniqueGrades);
+      console.log('📋 تفاصيل جميع الطلاب:');
+      allStudents.forEach(s => {
+        console.log(`  - ${s.name}: grade="${s.grade}"`);
+      });
+    } else {
+      console.log('👥 أول 3 طلاب من الصف:', rows.slice(0, 3).map(s => s.name));
+    }
+    
+    console.log('⭐ نقطة فحص 6: قبل _filterByAssistantType');
+    
+    // فلتر حسب نوع المساعد
+    console.log(`🔍 قبل الفلتر: ${rows.length} طالب`);
+    console.log(`👤 نوع المستخدم: ${currentUser}`);
+    if (currentUser === 'assistant') {
+      console.log(`📌 نوع المساعد: ${currentAssistantType}`);
+      console.log(`🏢 سنتر المساعد: ${currentAssistantCenter}`);
+    }
+    
+    rows = _filterByAssistantType(rows);
+    console.log(`✅ بعد الفلتر: ${rows.length} طالب - نوع المستخدم: ${currentUser}`);
+    
+    console.log('⭐ نقطة فحص 7: بعد الفلتر');
+    
+    rows.sort((a,b) => (a.name||'').localeCompare(b.name||'','ar'));
+
+    console.log('🏗️ جاري بناء الصفوف...');
+    
+    // Build rows using buildAttRow
+    if (rows.length > 0) {
+      console.log('⭐ نقطة فحص 8: جاري بناء', rows.length, 'صف');
+      try {
+        const htmlRows = rows.map(s => buildAttRow(s)).join('');
+        console.log('⭐ نقطة فحص 9: تم بناء HTML');
+        tbody.innerHTML = htmlRows;
+        console.log('✅ تم بناء', rows.length, 'صف');
+      } catch (err) {
+        console.error('❌ خطأ في buildAttRow:', err);
+        tbody.innerHTML = `<tr><td colspan="12" style="color:var(--danger);padding:20px">خطأ في بناء الجدول: ${err.message}</td></tr>`;
+      }
+    } else {
+      tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><i class="fas fa-users"></i><p>لا يوجد طلاب في هذا الصف</p></div></td></tr>`;
+      console.log('⚠️ لا يوجد طلاب لعرضها');
+    }
+
+    console.log('⭐ نقطة فحص 10: قبل Summary');
+    
+    // Summary
+    const sumEl = document.getElementById('attSummary');
+    if (sumEl) {
+      sumEl.style.display = 'block';
+      sumEl.textContent = `حضر ${rows.filter(s => countAttendance(monthData[s.id]||{}) > 0).length} من ${rows.length} طالب — صف ${grade}`;
+    }
+    console.log('✅ انتهى renderAttendanceTable بنجاح');
+  } catch (error) {
+    console.error('❌ خطأ في renderAttendanceTable:', error);
+    console.error('Stack:', error.stack);
   }
-  
-  // ✅ تحميل إعدادات الدرجات أولاً قبل رسم الجدول
-  await loadGradeSettings(grade);
-  
-  // عرض بطاقة إعدادات الدرجات
-  displayGradeSettings(grade);
-  
-  let rows = Object.values(students).filter(s => s.grade === grade);
-  console.log('📝 طلاب الصف', grade, ':', rows.length);
-  
-  // فلتر حسب نوع المساعد
-  rows = _filterByAssistantType(rows);
-  console.log('✅ بعد الفلتر:', rows.length);
-  
-  rows.sort((a,b) => (a.name||'').localeCompare(b.name||'','ar'));
-
-  // Build rows using buildAttRow
-  tbody.innerHTML = rows.length
-    ? rows.map(s => buildAttRow(s)).join('')
-    : `<tr><td colspan="12"><div class="empty-state"><i class="fas fa-users"></i><p>لا يوجد طلاب في هذا الصف</p></div></td></tr>`;
-
-  // Summary
-  const sumEl = document.getElementById('attSummary');
-  sumEl.style.display = 'block';
-  sumEl.textContent = `حضر ${rows.filter(s => countAttendance(monthData[s.id]||{}) > 0).length} من ${rows.length} طالب — صف ${grade}`;
 }
 
 function buildAttRow(s) {
-  const grade = document.getElementById('attGradeFilter')?.value || s.grade;
-  const md = monthData[s.id] || {};
-  const sess = md.sessions || {};
-  const exams = md.exams || {};
-  const attendCount = countAttendance(md);
-  
-  // قراءة إعدادات الدرجات من Cache
-  const examMaxScores = window._examMaxScoresByGrade?.[grade] || {};
-  
-  let sessCells = '';
-  for (let i = 1; i <= 8; i++) {
-    const v = sess[`s${i}`];
-    sessCells += `<td><button class="sess-btn ${v===true?'present':v===false?'absent':''}" onclick="toggleSession('${s.id}',${i})">${i}</button></td>`;
-  }
-  
-  // حساب المجموع الكلي والفعلي
-  let totalScore = 0, totalMax = 0;
-  let examInputs = '';
-  
-  for (let i = 1; i <= 8; i++) {
-    const maxScore = examMaxScores[`e${i}`] != null ? examMaxScores[`e${i}`] : 10;
-    const studentScore = exams[`e${i}`];
+  try {
+    const grade = document.getElementById('attGradeFilter')?.value || s.grade;
+    const md = monthData[s.id] || {};
+    const sess = md.sessions || {};
+    const exams = md.exams || {};
+    const attendCount = countAttendance(md);
     
-    if (maxScore > 0) {
-      // امتحان موجود - حقل نشط
-      totalMax += maxScore;
-      if (studentScore != null && studentScore !== '') {
-        totalScore += parseFloat(studentScore);
-      }
-      
-      const v = studentScore;
-      const ph = `ا${i}`;
-      const title = `اختبار ${i} (من ${maxScore})`;
-      
-      examInputs += `<input type="number" class="exam-inp ${v!=null&&v!==''?'filled':''}" min="0" max="${maxScore}" step="0.5"
-        value="${v!=null&&v!==''?v:''}" placeholder="${ph}"
-        onchange="saveExamScore('${s.id}',${i},this.value)"
-        title="${title}">`;
-    } else {
-      // امتحان غير موجود (درجة = 0) - حقل معطل
-      examInputs += `<input type="text" class="exam-inp" value="-" disabled
-        style="background:var(--bg-card2);color:var(--text-muted);cursor:not-allowed"
-        title="لا يوجد امتحان ${i}">`;
+    // قراءة إعدادات الدرجات من Cache
+    const examMaxScores = window._examMaxScoresByGrade?.[grade] || {};
+    
+    let sessCells = '';
+    for (let i = 1; i <= 8; i++) {
+      const v = sess[`s${i}`];
+      sessCells += `<td><button class="sess-btn ${v===true?'present':v===false?'absent':''}" onclick="toggleSession('${s.id}',${i})">${i}</button></td>`;
     }
+    
+    // حساب المجموع الكلي والفعلي
+    let totalScore = 0, totalMax = 0;
+    let examInputs = '';
+    
+    for (let i = 1; i <= 8; i++) {
+      const maxScore = examMaxScores[`e${i}`] != null ? examMaxScores[`e${i}`] : 10;
+      const studentScore = exams[`e${i}`];
+      
+      if (maxScore > 0) {
+        // امتحان موجود - حقل نشط
+        totalMax += maxScore;
+        if (studentScore != null && studentScore !== '') {
+          totalScore += parseFloat(studentScore);
+        }
+        
+        const v = studentScore;
+        const ph = `ا${i}`;
+        const title = `اختبار ${i} (من ${maxScore})`;
+        
+        examInputs += `<input type="number" class="exam-inp ${v!=null&&v!==''?'filled':''}" min="0" max="${maxScore}" step="0.5"
+          value="${v!=null&&v!==''?v:''}" placeholder="${ph}"
+          onchange="saveExamScore('${s.id}',${i},this.value)"
+          title="${title}">`;
+      } else {
+        // امتحان غير موجود (درجة = 0) - حقل معطل
+        examInputs += `<input type="text" class="exam-inp" value="-" disabled
+          style="background:var(--bg-card2);color:var(--text-muted);cursor:not-allowed"
+          title="لا يوجد امتحان ${i}">`;
+      }
+    }
+    
+    // عرض المجموع
+    const scoreDisplay = `<span style="font-weight:700;color:var(--accent)">${totalScore}</span><span style="color:var(--text-muted)">/${totalMax}</span>`;
+    
+    return `<tr>
+      <td><strong>${s.name}</strong></td>
+      <td><code style="background:var(--bg-card2);padding:2px 6px;border-radius:4px;font-size:0.8rem">${s.customCode||'-'}</code></td>
+      ${sessCells}
+      <td><div class="exam-inputs">${examInputs}</div></td>
+      <td><span class="badge ${attendCount>0?'badge-success':'badge-secondary'}">${attendCount}/8</span></td>
+    </tr>`;
+  } catch (error) {
+    console.error('❌ خطأ في buildAttRow للطالب:', s.name, error);
+    return `<tr><td colspan="12" style="color:var(--danger)">خطأ في عرض بيانات ${s.name}</td></tr>`;
   }
-  
-  // عرض المجموع
-  const scoreDisplay = `<span style="font-weight:700;color:var(--accent)">${totalScore}</span><span style="color:var(--text-muted)">/${totalMax}</span>`;
-  
-  return `<tr>
-    <td><strong>${s.name}</strong></td>
-    <td><code style="background:var(--bg-card2);padding:2px 6px;border-radius:4px;font-size:0.8rem">${s.customCode||'-'}</code></td>
-    ${sessCells}
-    <td><div class="exam-inputs">${examInputs}</div></td>
-    <td><span class="badge ${attendCount>0?'badge-success':'badge-secondary'}">${attendCount}/8</span></td>
-  </tr>`;
 }
 
 function toggleSession(studentId, sessionNum) {
@@ -3201,16 +3312,26 @@ async function loadGradeSettings(grade) {
   if (!grade) return;
   
   try {
-    const snap = await db.ref(`monthData/${currentMonth}/_examMaxScores/${grade}`).once('value');
+    console.log(`📥 جاري تحميل إعدادات الدرجات للصف: ${grade}`);
+    
+    // ⭐ إضافة timeout لتجنب التعليق
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('timeout')), 5000)
+    );
+    
+    const dataPromise = db.ref(`monthData/${currentMonth}/_examMaxScores/${grade}`).once('value');
+    
+    const snap = await Promise.race([dataPromise, timeoutPromise]);
     const settings = snap.val() || getDefaultGradeSettings();
     
     // تحديث الـ Cache
     if (!window._examMaxScoresByGrade) window._examMaxScoresByGrade = {};
     window._examMaxScoresByGrade[grade] = settings;
     
+    console.log(`✅ تم تحميل إعدادات ${grade}:`, settings);
     return settings;
   } catch (err) {
-    console.error('خطأ في قراءة إعدادات الدرجات:', err);
+    console.warn(`⚠️ خطأ في قراءة إعدادات الدرجات (استخدام الافتراضية):`, err.message);
     // استخدام القيم الافتراضية
     const settings = getDefaultGradeSettings();
     if (!window._examMaxScoresByGrade) window._examMaxScoresByGrade = {};
@@ -3339,6 +3460,8 @@ function quickAttendance() {
   registerAttendanceForStudent(s.id);
   document.getElementById('quickAttCode').value = '';
 }
+
+// ✅ دالة تشخيص المشاكل - تم إزالتها
 
 function registerAttendanceForStudent(studentId) {
   const md = monthData[studentId] || {};
@@ -3553,7 +3676,7 @@ function renderReports() {
   let rows = Object.values(students);
   // فلتر حسب نوع المساعد
   rows = _filterByAssistantType(rows);
-  if (grade) rows = rows.filter(s => s.grade === grade);
+  if (grade) rows = rows.filter(s => gradesMatch(s.grade, grade));
   rows.sort((a,b) => (a.name||'').localeCompare(b.name||'','ar'));
   if (currentReportTab === 'daily') {
     // التقرير اليومي معلق = حضر حصة بس لم يُرسل تقريرها اليومي
@@ -3721,7 +3844,7 @@ function renderReports() {
 function sendAllPending(type, flag) {
   const grade = document.getElementById('rptGradeFilter')?.value || '';
   let rows = Object.values(students).filter(s => s.phone !== 'none');
-  if (grade) rows = rows.filter(s => s.grade === grade);
+  if (grade) rows = rows.filter(s => gradesMatch(s.grade, grade));
   
   if (type === 'monthly' && flag) {
     // إرسال تقارير شهرية بـ flag محدد
@@ -3762,7 +3885,7 @@ ${schedText}${imgLine}
 function sendAllSchedulesToStudents() {
   const grade = document.getElementById('rptGradeFilter')?.value || '';
   let rows = Object.values(students).filter(s => s.phone !== 'none');
-  if (grade) rows = rows.filter(s => s.grade === grade);
+  if (grade) rows = rows.filter(s => gradesMatch(s.grade, grade));
   rows.forEach(s => sendScheduleToStudent(s.id));
   toast('تم فتح رسائل الجداول للجميع','info');
 }
@@ -4124,7 +4247,7 @@ function renderStats() {
   </div>`;
   html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">';
   GRADES.forEach(grade => {
-    const gs = activeStudents.filter(s => s.grade === grade);
+    const gs = activeStudents.filter(s => gradesMatch(s.grade, grade));
     const gPrivate = gs.filter(s => s.type === 'private').length;
     const gCenter  = gs.filter(s => s.type === 'center').length;
     const gPaid    = gs.filter(s => s.type === 'private' && monthData[s.id]?.paid).length;
@@ -4821,15 +4944,7 @@ function loadBooks() {
   });
 }
 
-function loadGradeSettings() {
-  return new Promise(resolve => {
-    db.ref('gradeSettings').on('value', snap => {
-      gradeSettings = snap.val() || {};
-      if (currentUser === 'admin') renderAttendanceTable();
-      resolve();
-    });
-  });
-}
+// تم إزالة هذه الدالة لأنها مكررة ومستبدلة بالدالة الجديدة async function loadGradeSettings(grade) في السطر 3296
 
 function toggleCoverField() {
   const has = document.getElementById('bkHasCover').checked;
@@ -5054,7 +5169,7 @@ function renderGroupList() {
 
   // جمع أولياء الأمور من نفس المرحلة (لهم رقم واتساب)
   const parents = Object.values(students).filter(s =>
-    s.grade === grade &&
+    gradesMatch(s.grade, grade) &&
     s.phone && s.phone !== 'none' &&
     (s.status || 'active') === 'active'
   );
@@ -5111,7 +5226,7 @@ function sendGroupInviteAll() {
   const link = document.getElementById('groupLink').value.trim();
 
   const parents = Object.values(students).filter(s =>
-    s.grade === grade && s.phone && s.phone !== 'none' && (s.status||'active') === 'active'
+    gradesMatch(s.grade, grade) && s.phone && s.phone !== 'none' && (s.status||'active') === 'active'
   );
   const seen = new Set();
   const unique = parents.filter(s => {
