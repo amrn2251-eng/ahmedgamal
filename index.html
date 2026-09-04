@@ -495,6 +495,25 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   .topbar-right     { gap: 4px; }
   .topbar-user      { display: none; }           /* hide username text */
   .btn-icon         { padding: 5px; font-size: 0.88rem; }
+  
+  /* ✅ تحسين عرض الشهر لولي الأمر على الموبايل */
+  body.parent-mode #parentMonthLabel { 
+    display: inline-flex !important; 
+    font-size: 0.75rem;
+    margin-right: 4px;
+  }
+  body.parent-mode #yearSelector { 
+    display: inline-block !important;
+    max-width: 90px !important; 
+    font-size: 0.75rem !important;
+    padding: 6px 8px !important;
+  }
+  body.parent-mode #monthSelector { 
+    max-width: 110px !important; 
+    font-size: 0.8rem !important;
+    padding: 6px 10px !important;
+    font-weight: 700 !important;
+  }
 
   /* Main content starts right below fixed topbar */
   .main-content { margin-top: 54px !important; padding: 12px; }
@@ -595,6 +614,12 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     </div>
     <div class="topbar-right">
       <span id="term-badge" style="font-size:0.78rem;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(79,142,247,0.15);color:var(--accent);border:1px solid rgba(79,142,247,0.3);white-space:nowrap"></span>
+      
+      <!-- 📅 Label للشهر (يظهر فقط لولي الأمر) -->
+      <span id="parentMonthLabel" style="display:none;font-size:0.85rem;font-weight:700;color:var(--accent);white-space:nowrap">
+        <i class="fas fa-calendar-alt"></i> الشهر:
+      </span>
+      
       <select class="topbar-month" id="yearSelector" onchange="onYearChange()" title="اختر العام الدراسي" style="max-width:130px"></select>
       <select class="topbar-month" id="monthSelector" onchange="onMonthChange()"></select>
       <span class="topbar-user" id="topbarUser"></span>
@@ -1873,16 +1898,44 @@ function _enterParentMode(displayName) {
   const err = document.getElementById('loginErr');
   err.style.display = 'none';
   currentUser = 'parent';
+  
+  // ✅ إضافة class للـ body
+  document.body.classList.add('parent-mode');
+  
   // أخفِ شاشة اللوجين وأظهر الـ app
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('topbarUser').textContent = displayName;
   
-  // ✅ إخفاء اختيار الشهر والعام لولي الأمر
+  // ✅ إظهار اختيار الشهر والعام لولي الأمر بشكل واضح جداً
+  const parentMonthLabel = document.getElementById('parentMonthLabel');
   const yearSelector = document.getElementById('yearSelector');
   const monthSelector = document.getElementById('monthSelector');
-  if (yearSelector) yearSelector.style.display = 'none';
-  if (monthSelector) monthSelector.style.display = 'none';
+  
+  if (parentMonthLabel) {
+    parentMonthLabel.style.display = 'inline-flex';
+  }
+  
+  if (yearSelector) {
+    yearSelector.style.display = 'inline-block';
+    yearSelector.style.fontSize = '0.9rem';
+    yearSelector.style.fontWeight = '700';
+    yearSelector.style.background = 'var(--accent)';
+    yearSelector.style.color = '#fff';
+    yearSelector.style.border = '2px solid var(--accent)';
+    yearSelector.style.padding = '8px 12px';
+  }
+  
+  if (monthSelector) {
+    monthSelector.style.display = 'inline-block';
+    monthSelector.style.fontSize = '0.9rem';
+    monthSelector.style.fontWeight = '700';
+    monthSelector.style.background = 'var(--accent)';
+    monthSelector.style.color = '#fff';
+    monthSelector.style.border = '2px solid var(--accent)';
+    monthSelector.style.padding = '8px 14px';
+    monthSelector.style.boxShadow = '0 2px 8px rgba(200,146,42,0.4)';
+  }
   
   // أخفِ كل عناصر الناف
   document.querySelectorAll('.nav-item').forEach(n => n.style.display = 'none');
@@ -1949,6 +2002,10 @@ function doLogout() {
   currentAssistantCenter = ''; currentAssistantType = '';
   parentStudentIds = [];
   localStorage.removeItem('genSession');
+  
+  // ✅ إزالة parent-mode class
+  document.body.classList.remove('parent-mode');
+  
   // إزالة observer style لو موجود
   const obs = document.getElementById('observerStyle');
   if (obs) obs.remove();
